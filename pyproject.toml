@@ -1,7 +1,7 @@
 [project]
-name = "cdp-python-backend-template"
+name = "ai-defra-search-data"
 version = "0.1.0"
-description = "CDP Python Backend Template"
+description = "ai-defra-search-data"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
