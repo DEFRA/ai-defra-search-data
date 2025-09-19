@@ -1,12 +1,34 @@
-from pydantic import HttpUrl
+
+from pydantic import Field, HttpUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class AppConfig(BaseSettings):
+class MsGraphConfig(BaseSettings):
     model_config = SettingsConfigDict()
-    python_env: str | None = None
+    graph_enabled: bool = Field(default=False, alias="MS_GRAPH_ENABLED")
+    tenant_id: str | None = Field(default=None, alias="MS_GRAPH_TENANT_ID")
+    client_id: str | None = Field(default=None, alias="MS_GRAPH_CLIENT_ID")
+    client_secret: str | None = Field(default=None, alias="MS_GRAPH_CLIENT_SECRET")
+    scope: str | None = Field(default="https://graph.microsoft.com/.default", alias="MS_GRAPH_SCOPE")
+
+
+class PostgresConfig(BaseSettings):
+    model_config = SettingsConfigDict()
+    host: str = Field(..., alias="POSTGRES_HOST")
+    port: int = Field(5432, alias="POSTGRES_PORT")
+    database: str = Field(default="ai_chatbot_sp_data", alias="POSTGRES_DB")
+    user: str = Field(default="ai_chatbot_sp_data", alias="POSTGRES_USER")
+    password: str | None = Field(default=None, alias="POSTGRES_PASSWORD")
+    ssl_mode: str = Field(default="require", alias="POSTGRES_SSL_MODE")
+    rds_truststore: str | None = Field(default=None, alias="TRUSTSTORE_RDS_ROOT_CA")
+
+
+class AppConfig(BaseSettings):
+    aws_region: str = Field(..., alias="AWS_REGION")
+    model_config = SettingsConfigDict()
+    python_env: str = "development"
     host: str | None = None
-    port: int | None = None
+    port: int
     log_config: str | None = None
     mongo_uri: str | None = None
     mongo_database: str = "ai-defra-search-data"
@@ -15,6 +37,9 @@ class AppConfig(BaseSettings):
     http_proxy: HttpUrl | None = None
     enable_metrics: bool = False
     tracing_header: str = "x-cdp-request-id"
+    ms_graph: MsGraphConfig = MsGraphConfig()
+    postgres: PostgresConfig = PostgresConfig()
+    bedrock_embedding_model_id: str | None = None
 
 
 config = AppConfig()

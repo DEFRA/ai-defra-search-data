@@ -1,0 +1,75 @@
+from logging import getLogger
+
+import boto3
+from sqlalchemy import URL, text
+from sqlalchemy.event import listen
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
+
+from app.common.tls import custom_ca_certs
+from app.config import config
+
+logger = getLogger(__name__)
+
+engine: AsyncEngine = None
+
+async def get_sql_engine() -> AsyncEngine:
+    global engine
+
+    if engine is not None:
+        return engine
+
+    url = URL.create(
+        drivername="postgresql+psycopg",
+        username=config.postgres.user,
+        host=config.postgres.host,
+        port=config.postgres.port,
+        database=config.postgres.database
+    )
+
+    cert = custom_ca_certs.get(config.postgres.rds_truststore)
+
+    if cert:
+        logger.info("Creating Postgres SQLAlchemy engine with custom TLS cert %s", config.postgres.rds_truststore)
+        engine = create_async_engine(
+            url,
+            connect_args={
+                "sslmode": config.postgres.ssl_mode,
+                "sslrootcert": cert
+            }
+        )
+    else:
+        logger.info("Creating Postgres SQLAlchemy engine without custom TLS cert")
+        engine = create_async_engine(url)
+
+    listen(engine.sync_engine, "do_connect", get_token)
+
+    logger.info("Testing Postgres SQLAlchemy connection to %s", config.postgres.host)
+    await check_connection(engine)
+
+    return engine
+
+
+async def check_connection(engine: AsyncEngine) -> bool:
+    async with engine.connect() as connection:
+        await connection.execute(text("SELECT 1 FROM knowledge_vectors"))
+
+
+def get_token(dialect, conn_rec, cargs, cparams):  # noqa: ARG001
+    if config.python_env == "development":
+        cparams["password"] = config.postgres.password
+    else:
+        logger.info("Generating RDS auth token for Postgres connection")
+
+        client = boto3.client("rds")
+
+        token = client.generate_db_auth_token(
+            Region=config.aws_region,
+            DBHostname=config.postgres.host,
+            Port=config.postgres.port,
+            DBUsername=config.postgres.user
+        )
+
+        logger.info("Generated RDS auth token for Postgres connection")
+
+        cparams["password"] = token
+
