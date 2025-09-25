@@ -1,8 +1,8 @@
 # Same as Black
 line-length = 88
 
-# Assume Python 3.12
-target-version = "py312"
+# Assume Python 3.9
+target-version = "py39"
 
 [lint]
 # Enable a comprehensive set of rules

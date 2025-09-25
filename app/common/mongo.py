@@ -38,10 +38,22 @@ async def get_db(client: AsyncMongoClient = Depends(get_mongo_client)) -> AsyncD
     global db
     if db is None:
         db = client.get_database(config.mongo_database)
+
+        await _ensure_indexes(db)
     return db
 
 
 async def check_connection(client: AsyncMongoClient):
-    database = await get_db(client)
+    database = client.get_database(config.mongo_database)
     response = await database.command("ping")
     logger.info("MongoDB PING %s", response)
+
+async def _ensure_indexes(db: AsyncDatabase) -> None:
+    """ Ensure indexes are created on startup. """
+    logger.info("Ensuring MongoDB indexes are present")
+
+    knowledge_entries = db.get_collection("knowledgeEntries")
+
+    await knowledge_entries.create_index("title", unique=True)
+
+    logger.info("MongoDB indexes ensured")
