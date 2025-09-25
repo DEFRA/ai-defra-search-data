@@ -19,7 +19,7 @@
             <column name="content" type="TEXT">
                 <constraints nullable="false"/>
             </column>
-            <column name="embedding" type="vector(1024)">
+            <column name="embedding" type="VECTOR(1024)">
                 <constraints nullable="true"/>
             </column>
             <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
