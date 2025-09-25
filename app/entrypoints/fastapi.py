@@ -22,7 +22,7 @@ async def lifespan(_: FastAPI):
     # Startup
     start_mappers()
     logger.info("SQLAlchemy ORM mappers started")
-    
+
     client = await get_mongo_client()
     logger.info("MongoDB client connected")
 

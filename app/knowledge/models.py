@@ -111,7 +111,7 @@ class KnowledgeResult:
     created_at: datetime
 
     embedding: list[float] | None = None
-    
+
     @property
     def similarity_category(self) -> str:
         """Categorize similarity level."""
@@ -130,7 +130,6 @@ class KnowledgeSearchResults:
 
     query_embedding: list[float]
     results: list[KnowledgeResult]
-    search_timestamp: datetime
 
     @property
     def best_match(self) -> KnowledgeResult | None:

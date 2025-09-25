@@ -1,13 +1,12 @@
 from datetime import datetime, timezone
 
-from app.common.bedrock import get_bedrock_client
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response, status
 from pymongo.asynchronous.database import AsyncDatabase
 
-from app.config import config
-from app.common.bedrock import BedrockEmbeddingService
+from app.common.bedrock import BedrockEmbeddingService, get_bedrock_client
 from app.common.mongo import get_db
 from app.common.postgres import get_async_session_factory
+from app.config import config
 from app.knowledge.models import (
     KnowledgeGroup,
     KnowledgeGroupNotFoundError,

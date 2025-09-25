@@ -29,7 +29,7 @@ knowledge_vectors_table = Table(
 
 def start_mappers():
     mapper_registry.map_imperatively(
-        model.KnowledgeVector, 
+        model.KnowledgeVector,
         knowledge_vectors_table,
         properties={
             "id": knowledge_vectors_table.c.id,

@@ -8,7 +8,10 @@ from app.knowledge.models import (
     KnowledgeSource,
     KnowledgeVector,
 )
-from app.knowledge.repository import AbstractKnowledgeGroupRepository, AbstractKnowledgeVectorRepository
+from app.knowledge.repository import (
+    AbstractKnowledgeGroupRepository,
+    AbstractKnowledgeVectorRepository,
+)
 
 logger = getLogger(__name__)
 
@@ -83,7 +86,7 @@ class KnowledgeService:
 
     async def _ingest_source(self, source: KnowledgeSource) -> None:
         logger.info("Ingesting source: %s", source.name)
-        
+
         embedding = self.embedding_service.generate_embeddings("Sample text for embedding generation.")
 
         await self.vector_repo.add(KnowledgeVector(content="Sample content", embedding=embedding))

@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from datetime import datetime
 
 from bson.datetime_ms import DatetimeMS
 from bson.objectid import ObjectId
@@ -270,7 +269,6 @@ class PostgresKnowledgeVectorRepository(AbstractKnowledgeVectorRepository):
 
         return KnowledgeSearchResults(
             query_embedding=embedding,
-            results=vector_results,
-            search_timestamp=datetime.now()
+            results=vector_results
         )
 
