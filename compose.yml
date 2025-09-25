@@ -91,27 +91,10 @@ services:
       PORT: ${PORT:-8085}
       MONGO_URI: ${MONGO_URI:-mongodb://mongodb:27017/}
       HOST: ${HOST:-0.0.0.0}
+    volumes:
+      - ./app:/home/nonroot/app
     develop:
       watch:
-        - action: sync
-          path: ./app
-          target: /home/nonroot/app
-          ignore:
-            - README.md
-            - "**/*.md"
-            - "**/test_*.py"
-            - tests/**/*
-            - .git/**/*
-            - .venv/**/*
-            - .pytest_cache/**/*
-            - .ruff_cache/**/*
-            - .vscode/**/*
-            - .github/**/*
-            - requirements-dev.txt
-            - pytest.ini
-            - .pre-commit-config.yaml
-            - sonar-project.properties
-            - LICENCE
         - action: rebuild
           path: ./pyproject.toml
           target: /home/nonroot/pyproject.toml

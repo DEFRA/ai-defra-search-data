@@ -13,8 +13,8 @@
 
     <changeSet author="DEFRA" id="2000000000000-1">
         <createTable tableName="knowledge_vectors">
-            <column name="id" type="INTEGER" >
-                <constraints primaryKey="true" nullable="false"/>
+            <column name="id" type="INTEGER" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false" />
             </column>
             <column name="content" type="TEXT">
                 <constraints nullable="false"/>

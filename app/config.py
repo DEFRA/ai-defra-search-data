@@ -12,6 +12,13 @@ class MsGraphConfig(BaseSettings):
     scope: str | None = Field(default="https://graph.microsoft.com/.default", alias="MS_GRAPH_SCOPE")
 
 
+class BedrockEmbeddingConfig(BaseSettings):
+    model_config = SettingsConfigDict()
+    model_id: str = Field(..., alias="BEDROCK_EMBEDDING_MODEL_ID")
+    guardrail_identifier: str | None = Field(default=None, alias="EMBEDDING_MODEL_GUARDRAIL_IDENTIFIER")
+    guardrail_version: str | None = Field(default=None, alias="EMBEDDING_MODEL_GUARDRAIL_VERSION")
+
+
 class PostgresConfig(BaseSettings):
     model_config = SettingsConfigDict()
     host: str = Field(..., alias="POSTGRES_HOST")
@@ -39,7 +46,7 @@ class AppConfig(BaseSettings):
     tracing_header: str = "x-cdp-request-id"
     ms_graph: MsGraphConfig = MsGraphConfig()
     postgres: PostgresConfig = PostgresConfig()
-    bedrock_embedding_model_id: str | None = None
+    bedrock_embedding_config: BedrockEmbeddingConfig = BedrockEmbeddingConfig()
 
 
 config = AppConfig()

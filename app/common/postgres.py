@@ -3,7 +3,12 @@ from logging import getLogger
 import boto3
 from sqlalchemy import URL, text
 from sqlalchemy.event import listen
-from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
 from app.common.tls import custom_ca_certs
 from app.config import config
@@ -11,6 +16,8 @@ from app.config import config
 logger = getLogger(__name__)
 
 engine: AsyncEngine = None
+async_session_factory: async_sessionmaker[AsyncSession] = None
+
 
 async def get_sql_engine() -> AsyncEngine:
     global engine
@@ -72,4 +79,19 @@ def get_token(dialect, conn_rec, cargs, cparams):  # noqa: ARG001
         logger.info("Generated RDS auth token for Postgres connection")
 
         cparams["password"] = token
+
+
+async def get_async_session_factory() -> async_sessionmaker[AsyncSession]:
+    """Get or create the async session factory."""
+    global async_session_factory
+
+    if async_session_factory is None:
+        engine = await get_sql_engine()
+        async_session_factory = async_sessionmaker(
+            engine,
+            class_=AsyncSession,
+            expire_on_commit=False
+        )
+
+    return async_session_factory
 
