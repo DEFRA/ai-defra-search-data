@@ -2,7 +2,7 @@ from pgvector.sqlalchemy import Vector
 from sqlalchemy import Column, DateTime, Integer, MetaData, Table, Text, func
 from sqlalchemy.orm import DeclarativeBase, registry
 
-import app.knowledge.models as model
+import app.ingestion.models as model
 
 
 class Base(DeclarativeBase):

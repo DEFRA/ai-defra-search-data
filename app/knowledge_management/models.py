@@ -1,15 +1,4 @@
-# DEPRECATED: This module has been split into domain-specific modules
-# Please update imports according to the migration guide below:
-#
-# KnowledgeSource, KnowledgeGroup, exceptions -> app.knowledge_management.models
-# KnowledgeSnapshot -> app.snapshot.models  
-# KnowledgeVector -> app.ingestion.models
-# KnowledgeResult, KnowledgeSearchResults -> app.search.models
-#
-# See DOMAIN_REFACTOR.md for complete migration guide
-
-from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date
 
 from app.common.id_utils import generate_random_id
 
@@ -84,67 +73,6 @@ class KnowledgeGroup:
     @property
     def sources(self) -> set[KnowledgeSource]:
         return self._sources
-
-
-@dataclass(frozen=True)
-class KnowledgeSnapshot:
-    """ Represents a snapshot of a knowledge group at a specific point in time. """
-
-    group_id: str
-    version: int
-    created_at: date
-    sources: set[KnowledgeSource]
-
-    @property
-    def snapshot_id(self) -> str:
-        """Generate snapshot ID from group_id and version."""
-        return f"{self.group_id}_v{self.version}"
-
-    def add_source(self, source: KnowledgeSource):
-        self.sources.add(source)
-
-
-class KnowledgeVector:
-    """Domain model for knowledge vectors."""
-
-    def __init__(self, content: str, embedding: list[float] = None):
-        self.content = content
-        self.embedding = embedding
-
-
-@dataclass(frozen=True)
-class KnowledgeResult:
-    """Represents a knowledge search result with similarity scoring."""
-
-    content: str
-    similarity_score: float  # 0.0 to 1.0, higher is more similar
-    created_at: datetime
-
-    embedding: list[float] | None = None
-
-    @property
-    def similarity_category(self) -> str:
-        """Categorize similarity level."""
-        if self.similarity_score >= 0.9:
-            return "very_high"
-        if self.similarity_score >= 0.8:
-            return "high"
-        if self.similarity_score >= 0.6:
-            return "medium"
-        return "low"
-
-
-@dataclass(frozen=True)
-class KnowledgeSearchResults:
-    """Container for knowledge search results with metadata."""
-
-    query_embedding: list[float]
-    results: list[KnowledgeResult]
-
-    @property
-    def best_match(self) -> KnowledgeResult | None:
-        """Get the highest scoring result."""
-        return self.results[0] if self.results else None
 
 
 class KnowledgeGroupAlreadyExistsError(Exception):

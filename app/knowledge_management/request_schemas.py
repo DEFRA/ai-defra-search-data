@@ -1,4 +1,3 @@
-
 from pydantic import BaseModel, Field
 
 
@@ -28,4 +27,3 @@ class KnowledgeGroupResponse(BaseModel):
     owner: str = Field(..., description="The owner of the knowledge group")
     created_at: str = Field(..., description="The creation date of the knowledge group in ISO format", serialization_alias="createdAt")
     updated_at: str = Field(..., description="The last update date of the knowledge group in ISO format", serialization_alias="updatedAt")
-

@@ -11,8 +11,8 @@ from app.common.postgres import get_sql_engine
 from app.common.tracing import TraceIdMiddleware
 from app.config import config
 from app.health.router import router as health_router
-from app.knowledge.orm_models import start_mappers
-from app.knowledge.router import router as knowledge_router
+from app.ingestion.orm_models import start_mappers
+from app.knowledge_management.router import router as knowledge_management_router
 
 logger = getLogger(__name__)
 
@@ -55,7 +55,7 @@ app.add_middleware(TraceIdMiddleware)
 
 # Setup Routes
 app.include_router(health_router)
-app.include_router(knowledge_router)
+app.include_router(knowledge_management_router)
 
 
 def main() -> None:
