@@ -156,6 +156,7 @@ async def ingest_group(group_id: str, background_tasks: BackgroundTasks, service
         group = await service.find_knowledge_group(group_id)
 
         background_tasks.add_task(service.ingest_knowledge_group, group)
+
         return {"message": f"Ingestion for knowledge group '{group_id}' has been initiated."}
     except KnowledgeGroupNotFoundError as err:
         raise HTTPException(status_code=404, detail=f"Knowledge group with ID '{group_id}' not found") from err

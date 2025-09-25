@@ -44,10 +44,6 @@ class BedrockEmbeddingService(AbstractEmbeddingService):
             "body": json.dumps(request),
         }
 
-        if self.model_config.guardrail_identifier and self.model_config.guardrail_version:
-            invoke_options["guardrailIdentifier"] = self.model_config.guardrail_identifier
-            invoke_options["guardrailVersion"] = self.model_config.guardrail_version
-
         response = self.client.invoke_model(**invoke_options)
 
         response_body = json.loads(response["body"].read().decode("utf-8"))
