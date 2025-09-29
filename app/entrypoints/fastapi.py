@@ -11,7 +11,6 @@ from app.common.postgres import get_sql_engine
 from app.common.tracing import TraceIdMiddleware
 from app.config import config
 from app.health.router import router as health_router
-from app.ingestion.orm_models import start_mappers
 from app.knowledge_management.router import router as knowledge_management_router
 
 logger = getLogger(__name__)
@@ -19,10 +18,6 @@ logger = getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    # Startup
-    start_mappers()
-    logger.info("SQLAlchemy ORM mappers started")
-
     client = await get_mongo_client()
     logger.info("MongoDB client connected")
 

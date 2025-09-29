@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import (
 
 from app.common.tls import custom_ca_certs
 from app.config import config
+from app.snapshot.orm_models import start_mappers
 
 logger = getLogger(__name__)
 
@@ -47,6 +48,9 @@ async def get_sql_engine() -> AsyncEngine:
     else:
         logger.info("Creating Postgres SQLAlchemy engine without custom TLS cert")
         engine = create_async_engine(url)
+
+    start_mappers()
+    logger.info("SQLAlchemy ORM mappers started")
 
     listen(engine.sync_engine, "do_connect", get_token)
 

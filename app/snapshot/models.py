@@ -1,7 +1,32 @@
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 
 from app.knowledge_management.models import KnowledgeSource
+
+
+@dataclass(frozen=True)
+class KnowledgeVectorResult:
+    """Represents a knowledge search result with similarity scoring."""
+
+    content: str
+    similarity_score: float  # 0.0 to 1.0, higher is more similar
+    created_at: datetime
+
+    embedding: list[float] | None = None
+    snapshot_id: str | None = None
+    source_id: str | None = None
+    metadata: dict | None = None
+
+    @property
+    def similarity_category(self) -> str:
+        """Categorize similarity level."""
+        if self.similarity_score >= 0.9:
+            return "very_high"
+        if self.similarity_score >= 0.8:
+            return "high"
+        if self.similarity_score >= 0.6:
+            return "medium"
+        return "low"
 
 
 @dataclass(frozen=True)

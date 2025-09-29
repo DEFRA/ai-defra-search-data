@@ -1,5 +1,6 @@
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import Column, DateTime, Integer, MetaData, Table, Text, func
+from sqlalchemy import Column, DateTime, Integer, MetaData, String, Table, Text, func
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, registry
 
 import app.ingestion.models as model
@@ -24,6 +25,9 @@ knowledge_vectors = Table(
         nullable=False,
         server_default=func.current_timestamp()
     ),
+    Column("snapshot_id", String(50), nullable=True),
+    Column("source_id", String(50), nullable=True),
+    Column("metadata", JSONB, nullable=True),
 )
 
 
@@ -36,5 +40,8 @@ def start_mappers():
             "content": knowledge_vectors.c.content,
             "embedding": knowledge_vectors.c.embedding,
             "created_at": knowledge_vectors.c.created_at,
+            "snapshot_id": knowledge_vectors.c.snapshot_id,
+            "source_id": knowledge_vectors.c.source_id,
+            "metadata": knowledge_vectors.c.metadata,
         }
     )

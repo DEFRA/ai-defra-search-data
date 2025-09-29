@@ -7,10 +7,6 @@ from app.common.bedrock import BedrockEmbeddingService, get_bedrock_client
 from app.common.mongo import get_db
 from app.common.postgres import get_async_session_factory
 from app.config import config
-from app.ingestion.repository import (
-    AbstractKnowledgeVectorRepository,
-    PostgresKnowledgeVectorRepository,
-)
 from app.ingestion.service import IngestionService
 from app.knowledge_management.models import (
     KnowledgeGroup,
@@ -26,6 +22,11 @@ from app.knowledge_management.request_schemas import (
     KnowledgeGroupResponse,
 )
 from app.knowledge_management.service import KnowledgeManagementService
+from app.snapshot.repository import (
+    AbstractKnowledgeVectorRepository,
+    PostgresKnowledgeVectorRepository,
+)
+from app.snapshot.service import SnapshotService
 
 router = APIRouter(tags=["knowledge-management"])
 
@@ -41,9 +42,13 @@ def get_knowledge_vector_repository(session_factory = Depends(get_async_session_
     return PostgresKnowledgeVectorRepository(session)
 
 
+def get_snapshot_service(vector_repo: AbstractKnowledgeVectorRepository = Depends(get_knowledge_vector_repository)) -> SnapshotService:
+    """Dependency injection for SnapshotService."""
+    return SnapshotService(vector_repo)
+
+
 async def get_bedrock_embedding_service():
     """Dependency injection for BedrockEmbeddingService."""
-
     return BedrockEmbeddingService(get_bedrock_client(), config.bedrock_embedding_config)
 
 
@@ -52,9 +57,12 @@ def get_knowledge_management_service(group_repo: AbstractKnowledgeGroupRepositor
     return KnowledgeManagementService(group_repo)
 
 
-def get_ingestion_service(vector_repo: AbstractKnowledgeVectorRepository = Depends(get_knowledge_vector_repository), embedding_service: BedrockEmbeddingService = Depends(get_bedrock_embedding_service)) -> IngestionService:
+def get_ingestion_service(
+    embedding_service: BedrockEmbeddingService = Depends(get_bedrock_embedding_service),
+    snapshot_service: SnapshotService = Depends(get_snapshot_service)
+) -> IngestionService:
     """Dependency injection for IngestionService."""
-    return IngestionService(vector_repo, embedding_service)
+    return IngestionService(embedding_service, snapshot_service)
 
 
 @router.get("/knowledge/groups", status_code=status.HTTP_200_OK, response_model=list[KnowledgeGroupResponse])
@@ -149,9 +157,14 @@ async def get_group(group_id: str, service: KnowledgeManagementService = Depends
 
 
 @router.post("/knowledge/groups/{group_id}/ingest", status_code=status.HTTP_202_ACCEPTED)
-async def ingest_group(group_id: str, background_tasks: BackgroundTasks, km_service: KnowledgeManagementService = Depends(get_knowledge_management_service), ingestion_service: IngestionService = Depends(get_ingestion_service)):
+async def ingest_group(
+        group_id: str, background_tasks: BackgroundTasks,
+        km_service: KnowledgeManagementService = Depends(get_knowledge_management_service),
+        ingestion_service: IngestionService = Depends(get_ingestion_service)
+    ):
     """
     Initiate the ingestion process for a specific knowledge group.
+    Each source will be processed individually.
 
     Args:
         group_id: The ID of the knowledge group to ingest
@@ -164,8 +177,13 @@ async def ingest_group(group_id: str, background_tasks: BackgroundTasks, km_serv
     try:
         group = await km_service.find_knowledge_group(group_id)
 
-        background_tasks.add_task(ingestion_service.ingest_knowledge_group, group)
+        if not group.sources:
+            return {"message": f"No sources found for knowledge group '{group_id}'."}
 
-        return {"message": f"Ingestion for knowledge group '{group_id}' has been initiated."}
+        for source in group.sources:
+            background_tasks.add_task(ingestion_service.process_source, source, group_id)
+
+        return {"message": f"Ingestion for knowledge group '{group_id}' has been initiated. Processing {len(group.sources)} sources individually."}
     except KnowledgeGroupNotFoundError as err:
         raise HTTPException(status_code=404, detail=f"Knowledge group with ID '{group_id}' not found") from err
+

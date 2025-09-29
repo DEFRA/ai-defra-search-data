@@ -72,7 +72,7 @@ class MongoKnowledgeGroupRepository(AbstractKnowledgeGroupRepository):
                     "groupId": group.group_id,
                     "parent_group_id": group_doc["_id"],
                     "name": source.name,
-                    "type": source.type,
+                    "type": source.data_type,
                     "location": source.location
                 }
                 source_documents.append(source_data)

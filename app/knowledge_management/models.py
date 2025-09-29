@@ -13,7 +13,7 @@ class KnowledgeSource:
                  source_id: str = None):
         self.source_id = source_id or generate_random_id("ks")
         self.name = name
-        self.type = data_type
+        self.data_type = data_type
         self.location = location
 
     def __eq__(self, other):

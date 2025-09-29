@@ -1,43 +1,53 @@
-import asyncio
 from logging import getLogger
 
 from app.common.bedrock import AbstractEmbeddingService
 from app.ingestion.models import KnowledgeVector
-from app.ingestion.repository import AbstractKnowledgeVectorRepository
-from app.knowledge_management.models import KnowledgeGroup, KnowledgeSource
+from app.knowledge_management.models import KnowledgeSource
+from app.snapshot.service import SnapshotService
 
 logger = getLogger(__name__)
 
 
 class IngestionService:
-    """Service class for handling knowledge ingestion operations."""
+    """Service class for processing individual knowledge sources."""
 
-    def __init__(self, vector_repo: AbstractKnowledgeVectorRepository, embedding_service: AbstractEmbeddingService):
-        self.vector_repo = vector_repo
+    def __init__(self, embedding_service: AbstractEmbeddingService, snapshot_service: SnapshotService):
         self.embedding_service = embedding_service
+        self.snapshot_service = snapshot_service
 
-    async def ingest_knowledge_group(self, group: KnowledgeGroup) -> None:
-        if not group.sources:
-            logger.warning("No sources found for knowledge group: %s", group.group_id)
-            return
+    async def process_source(self, source: KnowledgeSource, snapshot_id: str) -> None:
+        """
+        Process a single source: extract content, generate embeddings, store to S3 for audit,
+        and store vector for search. This is the main entry point for individual source processing.
+        """
+        logger.info("Processing source: %s for group: %s", source.name, snapshot_id)
 
-        logger.info("Starting ingestion of %d sources for knowledge group: %s", len(group.sources), group.group_id)
+        # Step 1: Process the source and create vector
+        vectors = await self._process_source_data(source, snapshot_id)
 
-        ingestion_tasks = []
+        # Step 2: Store vectors for search operations
+        if vectors:
+            await self.snapshot_service.store_vectors(vectors)
 
-        for source in group.sources:
-            task = asyncio.create_task(self._ingest_source(source))
-            ingestion_tasks.append(task)
+        logger.info("Processing completed for source: %s", source.name)
 
-        await asyncio.gather(*ingestion_tasks)
+    async def _process_source_data(self, source: KnowledgeSource) -> list[KnowledgeVector]:
+        """
+        Process a single source: extract content, generate embeddings, store to S3 for audit.
+        Returns processed vectors ready for search storage.
+        """
+        logger.info("Processing source data: %s", source.name)
 
-        logger.info("Ingestion completed for knowledge group: %s", group.group_id)
+        # TODO: Extract actual content from source based on source.data_type and source.location
+        content = "Sample content extracted from source"
 
-    async def _ingest_source(self, source: KnowledgeSource) -> None:
-        logger.info("Ingesting source: %s", source.name)
+        # Generate embedding
+        embedding = self.embedding_service.generate_embeddings(content)
 
-        embedding = self.embedding_service.generate_embeddings("Sample text for embedding generation.")
+        # TODO: Store to S3 for audit purposes
+        # audit_path = await self.s3_repo.store_audit_record(source, content, embedding, group_id)
 
-        await self.vector_repo.add(KnowledgeVector(content="Sample content", embedding=embedding))
+        vector = KnowledgeVector(content=content, embedding=embedding)
 
-        logger.info("Ingestion completed for source: %s", source.name)
+        logger.info("Processing completed for source data: %s", source.name)
+        return [vector]
