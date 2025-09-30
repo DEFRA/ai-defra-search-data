@@ -1,19 +1,25 @@
 from datetime import date
+from enum import Enum
 
 from app.common.id_utils import generate_random_id
 
+
+class SourceType(Enum):
+    """ Enum representing different types of knowledge sources. """
+    BLOB = "BLOB"
+    PRECHUNKED_BLOB = "PRECHUNKED_BLOB"
 
 class KnowledgeSource:
     """ Represents the source of a knowledge entry. """
 
     def __init__(self,
                  name: str,
-                 data_type: str,
+                 source_type: SourceType,
                  location: str,
                  source_id: str = None):
         self.source_id = source_id or generate_random_id("ks")
         self.name = name
-        self.data_type = data_type
+        self.source_type = source_type
         self.location = location
 
     def __eq__(self, other):

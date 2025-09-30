@@ -72,7 +72,7 @@ class MongoKnowledgeGroupRepository(AbstractKnowledgeGroupRepository):
                     "groupId": group.group_id,
                     "parent_group_id": group_doc["_id"],
                     "name": source.name,
-                    "type": source.data_type,
+                    "source_type": source.source_type,
                     "location": source.location
                 }
                 source_documents.append(source_data)
@@ -101,7 +101,7 @@ class MongoKnowledgeGroupRepository(AbstractKnowledgeGroupRepository):
         async for source_doc in cursor:
             source = KnowledgeSource(
                 name=source_doc["name"],
-                data_type=source_doc["type"],
+                source_type=source_doc["source_type"],
                 location=source_doc["location"]
             )
             group.add_source(source)
@@ -129,7 +129,7 @@ class MongoKnowledgeGroupRepository(AbstractKnowledgeGroupRepository):
             async for source_doc in source_cursor:
                 source = KnowledgeSource(
                     name=source_doc["name"],
-                    data_type=source_doc["type"],
+                    source_type=source_doc["source_type"],
                     location=source_doc["location"]
                 )
                 group.add_source(source)

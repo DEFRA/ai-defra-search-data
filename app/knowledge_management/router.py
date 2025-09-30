@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response, status
 from pymongo.asynchronous.database import AsyncDatabase
 
-from app.common.bedrock import BedrockEmbeddingService, get_bedrock_client
+from app.common.bedrock import AbstractEmbeddingService, BedrockEmbeddingService, get_bedrock_client
 from app.common.mongo import get_db
 from app.common.postgres import get_async_session_factory
 from app.config import config
@@ -23,7 +23,9 @@ from app.knowledge_management.request_schemas import (
 )
 from app.knowledge_management.service import KnowledgeManagementService
 from app.snapshot.repository import (
+    AbstractKnowledgeSnapshotRepository,
     AbstractKnowledgeVectorRepository,
+    MongoKnowledgeSnapshotRepository,
     PostgresKnowledgeVectorRepository,
 )
 from app.snapshot.service import SnapshotService
@@ -31,7 +33,12 @@ from app.snapshot.service import SnapshotService
 router = APIRouter(tags=["knowledge-management"])
 
 
-def get_knowledge_repository(db: AsyncDatabase = Depends(get_db)) -> MongoKnowledgeGroupRepository:
+def get_snapshot_repository(db: AsyncDatabase = Depends(get_db)) -> AbstractKnowledgeSnapshotRepository:
+    """Dependency injection for MongoKnowledgeSnapshotRepository."""
+    return MongoKnowledgeSnapshotRepository(db)
+
+
+def get_knowledge_repository(db: AsyncDatabase = Depends(get_db)) -> AbstractKnowledgeGroupRepository:
     """Dependency injection for MongoKnowledgeGroupRepository."""
     return MongoKnowledgeGroupRepository(db)
 
@@ -42,14 +49,18 @@ def get_knowledge_vector_repository(session_factory = Depends(get_async_session_
     return PostgresKnowledgeVectorRepository(session)
 
 
-def get_snapshot_service(vector_repo: AbstractKnowledgeVectorRepository = Depends(get_knowledge_vector_repository)) -> SnapshotService:
-    """Dependency injection for SnapshotService."""
-    return SnapshotService(vector_repo)
-
-
-async def get_bedrock_embedding_service():
+def get_bedrock_embedding_service() -> AbstractEmbeddingService:
     """Dependency injection for BedrockEmbeddingService."""
     return BedrockEmbeddingService(get_bedrock_client(), config.bedrock_embedding_config)
+
+
+def get_snapshot_service(
+        snapshot_repo: AbstractKnowledgeSnapshotRepository = Depends(get_snapshot_repository),
+        vector_repo: AbstractKnowledgeVectorRepository = Depends(get_knowledge_vector_repository),
+        embedding_service: AbstractEmbeddingService = Depends(get_bedrock_embedding_service)
+    ) -> SnapshotService:
+    """Dependency injection for SnapshotService."""
+    return SnapshotService(snapshot_repo, vector_repo, embedding_service)
 
 
 def get_knowledge_management_service(group_repo: AbstractKnowledgeGroupRepository = Depends(get_knowledge_repository)) -> KnowledgeManagementService:
@@ -59,10 +70,11 @@ def get_knowledge_management_service(group_repo: AbstractKnowledgeGroupRepositor
 
 def get_ingestion_service(
     embedding_service: BedrockEmbeddingService = Depends(get_bedrock_embedding_service),
-    snapshot_service: SnapshotService = Depends(get_snapshot_service)
+    snapshot_service: SnapshotService = Depends(get_snapshot_service),
+    background_tasks: BackgroundTasks = None
 ) -> IngestionService:
     """Dependency injection for IngestionService."""
-    return IngestionService(embedding_service, snapshot_service)
+    return IngestionService(embedding_service, snapshot_service, background_tasks)
 
 
 @router.get("/knowledge/groups", status_code=status.HTTP_200_OK, response_model=list[KnowledgeGroupResponse])
@@ -114,7 +126,7 @@ async def create_group(group: CreateKnowledgeGroupRequest, service: KnowledgeMan
     )
 
     for source in group.sources:
-        knowledge_group.add_source(KnowledgeSource(name=source.name, data_type=source.type, location=source.location))
+        knowledge_group.add_source(KnowledgeSource(name=source.name, source_type=source.type, location=source.location))
 
     await service.create_knowledge_group(knowledge_group)
 
@@ -158,7 +170,7 @@ async def get_group(group_id: str, service: KnowledgeManagementService = Depends
 
 @router.post("/knowledge/groups/{group_id}/ingest", status_code=status.HTTP_202_ACCEPTED)
 async def ingest_group(
-        group_id: str, background_tasks: BackgroundTasks,
+        group_id: str,
         km_service: KnowledgeManagementService = Depends(get_knowledge_management_service),
         ingestion_service: IngestionService = Depends(get_ingestion_service)
     ):
@@ -180,8 +192,7 @@ async def ingest_group(
         if not group.sources:
             return {"message": f"No sources found for knowledge group '{group_id}'."}
 
-        for source in group.sources:
-            background_tasks.add_task(ingestion_service.process_source, source, group_id)
+        await ingestion_service.process_group(group)
 
         return {"message": f"Ingestion for knowledge group '{group_id}' has been initiated. Processing {len(group.sources)} sources individually."}
     except KnowledgeGroupNotFoundError as err:

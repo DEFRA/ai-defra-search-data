@@ -21,8 +21,8 @@ class AbstractKnowledgeSnapshotRepository(ABC):
         """Get a knowledge snapshot by its ID"""
 
     @abstractmethod
-    async def list_all(self) -> list[KnowledgeSnapshot]:
-        """List all knowledge snapshots"""
+    async def list_snapshots_by_group(self, group_id: str) -> list[KnowledgeSnapshot]:
+        """List all knowledge snapshots for a specific group"""
 
 
 class MongoKnowledgeSnapshotRepository(AbstractKnowledgeSnapshotRepository):
