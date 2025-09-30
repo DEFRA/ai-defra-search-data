@@ -80,10 +80,6 @@ class AbstractKnowledgeVectorRepository(ABC):
         """Add a knowledge vector entry"""
 
     @abstractmethod
-    async def query(self, embedding: list[float], top_k: int) -> list[KnowledgeVectorResult]:
-        """Query for the top_k most similar knowledge vectors"""
-
-    @abstractmethod
     async def query_by_snapshot(self, embedding: list[float], snapshot_id: str, top_k: int) -> list[KnowledgeVectorResult]:
         """Query for the top_k most similar knowledge vectors within a specific snapshot"""
 
@@ -111,41 +107,6 @@ class PostgresKnowledgeVectorRepository(AbstractKnowledgeVectorRepository):
 
         await self.session.commit()
 
-    async def query(self, embedding: list[float], top_k: int) -> list[KnowledgeVectorResult]:
-        """Query for the top_k most similar knowledge vectors using cosine similarity."""
-
-        query = (
-            select(
-                KnowledgeVector.id,
-                KnowledgeVector.content,
-                KnowledgeVector.embedding,
-                KnowledgeVector.created_at,
-                KnowledgeVector.snapshot_id,
-                KnowledgeVector.source_id,
-                KnowledgeVector.metadata,
-                KnowledgeVector.embedding.cosine_distance(embedding).label("distance")
-            )
-            .order_by(KnowledgeVector.embedding.cosine_distance(embedding))
-            .limit(top_k)
-        )
-
-        result = await self.session.execute(query)
-        rows = result.fetchall()
-
-        # Convert to domain objects
-        return [
-            KnowledgeVectorResult(
-                content=row.content,
-                similarity_score=1.0 - float(row.distance),  # Convert distance to similarity
-                created_at=row.created_at,
-                embedding=row.embedding,  # Include embedding in results
-                snapshot_id=row.snapshot_id,
-                source_id=row.source_id,
-                metadata=row.metadata
-            )
-            for row in rows
-        ]
-
     async def query_by_snapshot(self, embedding: list[float], snapshot_id: str, top_k: int) -> list[KnowledgeVectorResult]:
         """Query for the top_k most similar knowledge vectors within a specific snapshot."""
 
@@ -168,11 +129,10 @@ class PostgresKnowledgeVectorRepository(AbstractKnowledgeVectorRepository):
         result = await self.session.execute(query)
         rows = result.fetchall()
 
-        # Convert to domain objects
         return [
             KnowledgeVectorResult(
                 content=row.content,
-                similarity_score=1.0 - float(row.distance),  # Convert distance to similarity
+                similarity_score=1.0 - float(row.distance),
                 created_at=row.created_at,
                 embedding=row.embedding,
                 snapshot_id=row.snapshot_id,

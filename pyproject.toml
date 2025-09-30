@@ -14,6 +14,7 @@ dependencies = [
     "ecs-logging>=2.2.0",
     "fastapi>=0.115.12",
     "httpx>=0.28.1",
+    "mcp[cli]>=1.15.0",
     "microsoft-kiota-authentication-azure>=1.9.6",
     "msgraph-sdk>=1.40.0",
     "pgvector>=0.4.1",

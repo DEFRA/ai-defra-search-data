@@ -1,4 +1,5 @@
-import datetime
+from datetime import timezone, datetime
+
 from logging import getLogger
 
 from app.common.bedrock import AbstractEmbeddingService
@@ -27,13 +28,21 @@ class SnapshotService:
 
     async def create_snapshot(self, group_id: str, version: str, sources: list[dict]):
         """Create a new knowledge snapshot."""
+
+        previous_snapshots = await self.snapshot_repo.list_snapshots_by_group(group_id)
+
+        new_version = len(previous_snapshots) + 1
+
         snapshot = KnowledgeSnapshot(
             group_id=group_id,
-            version=version,
-            created_at=datetime.utcnow(),
+            version=new_version,
+            created_at=datetime.now(tz=timezone.utc),
             sources=sources
         )
+
         await self.snapshot_repo.save(snapshot)
+
+        return snapshot
 
     async def get_by_id(self, snapshot_id: str):
         """Get a knowledge snapshot by its ID"""

@@ -25,8 +25,10 @@ class IngestionService:
         Args:
             group: The knowledge group containing sources to process
         """
+        snapshot = await self.snapshot_service.create_snapshot(group.group_id, "v1.0", group.sources)
+
         for source in group.sources:
-            self.background_tasks.add_task(self._process_source, source, group.group_id)
+            self.background_tasks.add_task(self._process_source, source, snapshot.snapshot_id)
 
     async def _process_source(self, source: KnowledgeSource, snapshot_id: str) -> None:
         """

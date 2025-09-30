@@ -6,6 +6,9 @@ from app.common.id_utils import generate_random_id
 
 class SourceType(Enum):
     """ Enum representing different types of knowledge sources. """
+    def __str__(self) -> str:
+        return self.value
+
     BLOB = "BLOB"
     PRECHUNKED_BLOB = "PRECHUNKED_BLOB"
 
