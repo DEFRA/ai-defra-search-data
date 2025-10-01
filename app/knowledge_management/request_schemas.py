@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 
 from app.knowledge_management.models import SourceType
 
+
 class KnowledgeSource(BaseModel):
     """ Model for a knowledge source. """
 

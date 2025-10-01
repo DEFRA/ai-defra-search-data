@@ -1,4 +1,4 @@
-from contextlib import AsyncExitStack, asynccontextmanager
+from contextlib import asynccontextmanager
 from logging import getLogger
 
 from fastapi import FastAPI
@@ -23,9 +23,7 @@ async def lifespan(_: FastAPI):
     engine = await get_sql_engine()
     logger.info("Postgres SQLAlchemy engine created")
 
-    async with AsyncExitStack() as stack:
-        await stack.enter_async_context(data_mcp_server.session_manager.run())
-        yield
+    yield
 
     # Shutdown
     if client:
@@ -36,8 +34,17 @@ async def lifespan(_: FastAPI):
         await engine.dispose()
         logger.info("Postgres SQLAlchemy engine disposed")
 
+mcp_app = data_mcp_server.http_app(path="/mcp")
 
-app = FastAPI(lifespan=lifespan)
+
+@asynccontextmanager
+async def combined_lifespan(app: FastAPI):
+    async with lifespan(app), mcp_app.lifespan(app):
+        yield
+
+
+app = FastAPI(lifespan=combined_lifespan)
+
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc):  # noqa: ARG001
@@ -46,6 +53,7 @@ async def validation_exception_handler(request, exc):  # noqa: ARG001
         content={"detail": exc.errors()},
     )
 
+
 # Setup middleware
 app.add_middleware(TraceIdMiddleware)
 
@@ -53,4 +61,4 @@ app.add_middleware(TraceIdMiddleware)
 app.include_router(health_router)
 app.include_router(knowledge_management_router)
 
-app.mount("/", data_mcp_server.streamable_http_app())
+app.mount("/", mcp_app)

@@ -1,5 +1,4 @@
-from datetime import timezone, datetime
-
+from datetime import datetime, timezone
 from logging import getLogger
 
 from app.common.bedrock import AbstractEmbeddingService
