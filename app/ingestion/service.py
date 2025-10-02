@@ -85,8 +85,8 @@ class IngestionService:
 
         vectors = []
 
-        for chunkNo in range(len(chunks)):
-            chunk = chunks[chunkNo]
+        for chunk_no in range(len(chunks)):
+            chunk = chunks[chunk_no]
             embedding = self.embedding_service.generate_embeddings(chunk["text"])
             vector = KnowledgeVector(
                 content=chunk["text"],
@@ -97,7 +97,7 @@ class IngestionService:
             )
             vectors.append(vector)
 
-            if (chunkNo + 1) % 50 == 0:
-                logger.info("Generated embeddings for %d chunks", chunkNo + 1)
+            if (chunk_no + 1) % 50 == 0:
+                logger.info("Generated embeddings for %d chunks", chunk_no + 1)
 
         return vectors
