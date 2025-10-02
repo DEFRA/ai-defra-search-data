@@ -3,7 +3,7 @@ from logging import getLogger
 
 from app.common.bedrock import AbstractEmbeddingService
 from app.ingestion.models import KnowledgeVector
-from app.snapshot.models import KnowledgeSnapshot
+from app.snapshot.models import KnowledgeSnapshot, KnowledgeVectorResult
 from app.snapshot.repository import (
     AbstractKnowledgeVectorRepository,
     MongoKnowledgeSnapshotRepository,
@@ -57,8 +57,8 @@ class SnapshotService:
         await self.vector_repo.add_batch(vectors)
         logger.info("Successfully stored vectors for search")
 
-    async def search_similar(self, query: str, top_k: int):
+    async def search_similar(self, snapshot_id: str, query: str, top_k: int) -> list[KnowledgeVectorResult]:
         """Search for similar vectors."""
         logger.info("Searching for top %d similar vectors", top_k)
         embedding = self.embedding_service.generate_embeddings(query)
-        return await self.vector_repo.query(embedding, top_k)
+        return await self.vector_repo.query_by_snapshot(embedding, snapshot_id, top_k)
