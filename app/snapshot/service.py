@@ -25,7 +25,7 @@ class SnapshotService:
         self.vector_repo = vector_repo
         self.embedding_service = embedding_service
 
-    async def create_snapshot(self, group_id: str, version: str, sources: list[dict]):
+    async def create_snapshot(self, group_id: str, sources: list[dict]):
         """Create a new knowledge snapshot."""
 
         previous_snapshots = await self.snapshot_repo.list_snapshots_by_group(group_id)

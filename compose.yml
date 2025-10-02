@@ -1,6 +1,6 @@
 services:
   localstack:
-    image: localstack/localstack:3.0.2
+    image: localstack/localstack:4
     ports:
       - "4566:4566" # LocalStack Gateway
       - "4510-4559:4510-4559" # external services port range
@@ -91,6 +91,7 @@ services:
       PORT: ${PORT:-8085}
       MONGO_URI: ${MONGO_URI:-mongodb://mongodb:27017/}
       HOST: ${HOST:-0.0.0.0}
+      LOCALSTACK_URL: ${LOCALSTACK_URL:-http://localstack:4566}
     volumes:
       - ./app:/home/nonroot/app
     develop:

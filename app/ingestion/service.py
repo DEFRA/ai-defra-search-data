@@ -1,9 +1,11 @@
+import json
 from logging import getLogger
 
 from fastapi import BackgroundTasks
 
 from app.common.bedrock import AbstractEmbeddingService
-from app.ingestion.models import KnowledgeVector
+from app.ingestion.models import KnowledgeVector, NoSourceDataError
+from app.ingestion.repository import AbstractIngestionDataRepository
 from app.knowledge_management.models import KnowledgeGroup, KnowledgeSource
 from app.snapshot.service import SnapshotService
 
@@ -13,7 +15,14 @@ logger = getLogger(__name__)
 class IngestionService:
     """Service class for processing individual knowledge sources."""
 
-    def __init__(self, embedding_service: AbstractEmbeddingService, snapshot_service: SnapshotService, background_tasks: BackgroundTasks):
+    def __init__(self,
+                 ingestion_repository: AbstractIngestionDataRepository,
+                 embedding_service: AbstractEmbeddingService,
+                 snapshot_service: SnapshotService,
+                 background_tasks: BackgroundTasks
+        ):
+
+        self.ingestion_repository = ingestion_repository
         self.embedding_service = embedding_service
         self.snapshot_service = snapshot_service
         self.background_tasks = background_tasks
@@ -25,7 +34,7 @@ class IngestionService:
         Args:
             group: The knowledge group containing sources to process
         """
-        snapshot = await self.snapshot_service.create_snapshot(group.group_id, "v1.0", group.sources)
+        snapshot = await self.snapshot_service.create_snapshot(group.group_id, group.sources)
 
         for source in group.sources:
             self.background_tasks.add_task(self._process_source, source, snapshot.snapshot_id)
@@ -37,37 +46,58 @@ class IngestionService:
         """
         logger.info("Processing source: %s for group: %s", source.name, snapshot_id)
 
-        # Step 1: Process the source and create vector
-        vectors = await self._process_source_data(source, snapshot_id)
+        vectors = []
 
-        # Step 2: Store vectors for search operations
+        chunk_files = self.ingestion_repository.list(source.source_id)
+
+        if len(chunk_files) == 0:
+            msg = f"No pre-chunked data found for source {source.source_id}"
+            raise NoSourceDataError(msg)
+
+        for chunk_file in chunk_files:
+            file = self.ingestion_repository.get(chunk_file)
+
+            if file is None:
+                msg = f"Failed to retrieve file {chunk_file} from repository for source {source.source_id}"
+                raise NoSourceDataError(msg)
+
+            file_vectors = await self._process_chunked_data(file, snapshot_id, source.source_id)
+
+            vectors.extend(file_vectors)
+
+        print(f"Storing {len(vectors)} embedded chunks for source {source.source_id}")
+
         if vectors:
             await self.snapshot_service.store_vectors(vectors)
 
         logger.info("Processing completed for source: %s", source.name)
 
-    async def _process_source_data(self, source: KnowledgeSource, snapshot_id: str) -> list[KnowledgeVector]:
+    async def _process_chunked_data(self, file: bytes, snapshot_id: str, source_id: str) -> list[KnowledgeVector]:
         """
-        Process a single source: extract content, generate embeddings, store to S3 for audit.
+        Process pre-chunked data from a file: read content, generate embeddings, and prepare vectors.
         Returns processed vectors ready for search storage.
         """
-        logger.info("Processing source data: %s", source.name)
+        logger.info("Processing pre-chunked data from file")
 
-        # TODO: Extract actual content from source based on source.source_type and source.location
-        content = "Sample content extracted from source"
+        chunks = [json.loads(line) for line in file.splitlines()]
 
-        # Generate embedding
-        embedding = self.embedding_service.generate_embeddings(content)
+        logger.info("Generating embeddings for %d chunks", len(chunks))
 
-        # TODO: Store to S3 for audit purposes
-        # audit_path = await self.s3_repo.store_audit_record(source, content, embedding, snapshot_id)
+        vectors = []
 
-        vector = KnowledgeVector(
-            content=content,
-            embedding=embedding,
-            snapshot_id=snapshot_id,
-            source_id=source.source_id
-        )
+        for chunkNo in range(len(chunks)):
+            chunk = chunks[chunkNo]
+            embedding = self.embedding_service.generate_embeddings(chunk["text"])
+            vector = KnowledgeVector(
+                content=chunk["text"],
+                embedding=embedding,
+                snapshot_id=snapshot_id,
+                source_id=source_id,
+                metadata=None
+            )
+            vectors.append(vector)
 
-        logger.info("Processing completed for source data: %s", source.name)
-        return [vector]
+            if (chunkNo + 1) % 50 == 0:
+                logger.info("Generated embeddings for %d chunks", chunkNo + 1)
+
+        return vectors

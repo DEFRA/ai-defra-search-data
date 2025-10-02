@@ -71,6 +71,7 @@ class MongoKnowledgeGroupRepository(AbstractKnowledgeGroupRepository):
                     "_id": ObjectId(),
                     "groupId": group.group_id,
                     "parent_group_id": group_doc["_id"],
+                    "sourceId": source.source_id,
                     "name": source.name,
                     "source_type": str(source.source_type),
                     "location": source.location
@@ -102,7 +103,8 @@ class MongoKnowledgeGroupRepository(AbstractKnowledgeGroupRepository):
             source = KnowledgeSource(
                 name=source_doc["name"],
                 source_type=source_doc["source_type"],
-                location=source_doc["location"]
+                location=source_doc["location"],
+                source_id=source_doc["sourceId"]
             )
             group.add_source(source)
 
@@ -130,7 +132,8 @@ class MongoKnowledgeGroupRepository(AbstractKnowledgeGroupRepository):
                 source = KnowledgeSource(
                     name=source_doc["name"],
                     source_type=source_doc["source_type"],
-                    location=source_doc["location"]
+                    location=source_doc["location"],
+                    source_id=source_doc["sourceId"]
                 )
                 group.add_source(source)
 

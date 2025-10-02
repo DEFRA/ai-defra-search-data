@@ -40,10 +40,11 @@ class AppConfig(BaseSettings):
     mongo_uri: str | None = None
     mongo_database: str = "ai-defra-search-data"
     mongo_truststore: str = "TRUSTSTORE_CDP_ROOT_CA"
-    aws_endpoint_url: str | None = None
+    localstack_url: str | None = None
     http_proxy: HttpUrl | None = None
     enable_metrics: bool = False
     tracing_header: str = "x-cdp-request-id"
+    ingestion_data_bucket: str = Field(..., alias="INGESTION_DATA_BUCKET_NAME")
     ms_graph: MsGraphConfig = MsGraphConfig()
     postgres: PostgresConfig = PostgresConfig()
     bedrock_embedding_config: BedrockEmbeddingConfig = BedrockEmbeddingConfig()
