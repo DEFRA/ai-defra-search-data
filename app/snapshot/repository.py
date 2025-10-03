@@ -4,9 +4,9 @@ from bson.datetime_ms import DatetimeMS
 from pymongo.asynchronous.database import AsyncCollection, AsyncDatabase
 from sqlalchemy import select
 
-from app.snapshot.models import KnowledgeVector
 from app.snapshot.models import (
     KnowledgeSnapshot,
+    KnowledgeVector,
     KnowledgeVectorResult,
 )
 
@@ -76,7 +76,7 @@ class MongoKnowledgeSnapshotRepository(AbstractKnowledgeSnapshotRepository):
             snapshots.append(snapshot)
 
         return snapshots
-    
+
     async def get_latest_by_group(self, group_id: str) -> KnowledgeSnapshot | None:
         """Get the latest knowledge snapshot for a specific group"""
         doc = await self.knowledge_snapshots.find_one(

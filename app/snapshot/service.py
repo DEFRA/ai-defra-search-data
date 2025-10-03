@@ -2,8 +2,12 @@ from datetime import datetime, timezone
 from logging import getLogger
 
 from app.common.bedrock import AbstractEmbeddingService
-from app.snapshot.models import KnowledgeVector
-from app.snapshot.models import KnowledgeSnapshot, KnowledgeSnapshotNotFoundError, KnowledgeVectorResult
+from app.snapshot.models import (
+    KnowledgeSnapshot,
+    KnowledgeSnapshotNotFoundError,
+    KnowledgeVector,
+    KnowledgeVectorResult,
+)
 from app.snapshot.repository import (
     AbstractKnowledgeVectorRepository,
     MongoKnowledgeSnapshotRepository,
@@ -71,18 +75,19 @@ class SnapshotService:
 
         Args:
             snapshot_id: The ID of the knowledge snapshot to retrieve
-        
+
         Returns:
             The found KnowledgeSnapshot object
 
         Raises:
-            KnowledgeSnapshotNotFoundError: If a snapshot with the given ID does not exist 
+            KnowledgeSnapshotNotFoundError: If a snapshot with the given ID does not exist
         """
-        
+
         snapshot = await self._snapshot_repo.get_by_id(snapshot_id)
 
         if not snapshot:
-            raise KnowledgeSnapshotNotFoundError(f"Snapshot '{snapshot_id}' not found")
+            msg = f"Snapshot '{snapshot_id}' not found"
+            raise KnowledgeSnapshotNotFoundError(msg)
 
         return snapshot
 
@@ -112,7 +117,7 @@ class SnapshotService:
         Returns:
             A list of KnowledgeVectorResult objects representing the most relevant documents
         """
-        
+
         embedding = self._embedding_service.generate_embeddings(query)
 
         return await self._vector_repo.query_by_snapshot(embedding, snapshot_id, max_results)

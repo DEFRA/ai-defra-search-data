@@ -1,12 +1,13 @@
-from app.knowledge_management.models import KnowledgeGroupNotFoundError
-from app.snapshot.models import KnowledgeSnapshotNotFoundError
-from fastapi import APIRouter, Depends, HTTPException, status
 from logging import getLogger
 
-from app.snapshot.dependencies import get_snapshot_service
-from app.snapshot.service import SnapshotService
+from fastapi import APIRouter, Depends, HTTPException, status
+
 from app.knowledge_management.dependencies import get_knowledge_management_service
+from app.knowledge_management.models import KnowledgeGroupNotFoundError
 from app.knowledge_management.service import KnowledgeManagementService
+from app.snapshot.dependencies import get_snapshot_service
+from app.snapshot.models import KnowledgeSnapshotNotFoundError
+from app.snapshot.service import SnapshotService
 
 logger = getLogger(__name__)
 router = APIRouter(tags=["snapshots"])
@@ -69,14 +70,14 @@ async def activate_snapshot(
     """
     try:
         snapshot = await snapshot_service.get_by_id(snapshot_id)
-        
+
         await knowledge_service.set_active_snapshot(
             group_id=snapshot.group_id,
             snapshot_id=snapshot_id
         )
-        
+
         logger.info("Successfully activated snapshot %s for group %s", snapshot_id, snapshot.group_id)
-        
+
         return {"message": f"Snapshot '{snapshot_id}' activated successfully for group '{snapshot.group_id}'"}
     except KnowledgeSnapshotNotFoundError as e:
         raise HTTPException(

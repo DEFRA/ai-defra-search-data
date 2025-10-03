@@ -94,7 +94,7 @@ class MongoKnowledgeGroupRepository(AbstractKnowledgeGroupRepository):
             owner=group_doc["owner"],
             created_at=group_doc["createdAt"],
             updated_at=group_doc["updatedAt"],
-            active_snapshot=group_doc["activeSnapshot"] if "activeSnapshot" in group_doc else None
+            active_snapshot=group_doc.get("activeSnapshot", None)
         )
 
         # Load and add all sources
@@ -123,7 +123,7 @@ class MongoKnowledgeGroupRepository(AbstractKnowledgeGroupRepository):
                 owner=group_doc["owner"],
                 created_at=group_doc["createdAt"],
                 updated_at=group_doc["updatedAt"],
-                active_snapshot=group_doc["activeSnapshot"] if "activeSnapshot" in group_doc else None
+                active_snapshot=group_doc.get("activeSnapshot", None)
             )
 
             source_cursor = self.knowledge_sources.find({"groupId": group.group_id})

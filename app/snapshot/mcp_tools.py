@@ -1,4 +1,3 @@
-import json
 
 from app.common.bedrock import BedrockEmbeddingService, get_bedrock_client
 from app.common.mongo import get_db, get_mongo_client
@@ -29,19 +28,21 @@ async def relevant_sources_by_group(group_id: str, query: str, max_results: int 
     snapshot_repo = MongoKnowledgeSnapshotRepository(db)
     vector_repo = PostgresKnowledgeVectorRepository(session)
     group_repo = MongoKnowledgeGroupRepository(db)
-    
+
     embedding_service = BedrockEmbeddingService(get_bedrock_client(), config.bedrock_embedding_config)
     snapshot_service = SnapshotService(snapshot_repo, vector_repo, embedding_service)
     knowledge_service = KnowledgeManagementService(group_repo)
 
     group = await knowledge_service.find_knowledge_group(group_id)
-    
+
     if not group:
-        raise KnowledgeGroupNotFoundError(f"Knowledge group with ID '{group_id}' not found")
-    
+        msg = f"Knowledge group with ID '{group_id}' not found"
+        raise KnowledgeGroupNotFoundError(msg)
+
     if not group.active_snapshot:
-        raise NoActiveSnapshotError(f"Knowledge group with ID '{group_id}' has no active snapshot")
-    
+        msg = f"Knowledge group with ID '{group_id}' has no active snapshot"
+        raise NoActiveSnapshotError(msg)
+
     snapshot_id = group.active_snapshot
 
     documents = await snapshot_service.search_similar(snapshot_id, query, max_results)

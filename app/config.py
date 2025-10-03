@@ -3,15 +3,6 @@ from pydantic import Field, HttpUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class MsGraphConfig(BaseSettings):
-    model_config = SettingsConfigDict()
-    graph_enabled: bool = Field(default=False, alias="MS_GRAPH_ENABLED")
-    tenant_id: str | None = Field(default=None, alias="MS_GRAPH_TENANT_ID")
-    client_id: str | None = Field(default=None, alias="MS_GRAPH_CLIENT_ID")
-    client_secret: str | None = Field(default=None, alias="MS_GRAPH_CLIENT_SECRET")
-    scope: str | None = Field(default="https://graph.microsoft.com/.default", alias="MS_GRAPH_SCOPE")
-
-
 class BedrockEmbeddingConfig(BaseSettings):
     model_config = SettingsConfigDict()
     model_id: str = Field(..., alias="BEDROCK_EMBEDDING_MODEL_ID")
@@ -45,7 +36,6 @@ class AppConfig(BaseSettings):
     enable_metrics: bool = False
     tracing_header: str = "x-cdp-request-id"
     ingestion_data_bucket: str = Field(..., alias="INGESTION_DATA_BUCKET_NAME")
-    ms_graph: MsGraphConfig = MsGraphConfig()
     postgres: PostgresConfig = PostgresConfig()
     bedrock_embedding_config: BedrockEmbeddingConfig = BedrockEmbeddingConfig()
 

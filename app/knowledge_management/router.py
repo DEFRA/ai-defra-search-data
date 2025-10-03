@@ -3,22 +3,22 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from app.ingestion.service import IngestionService
+from app.knowledge_management.api_schemas import (
+    CreateKnowledgeGroupRequest,
+    KnowledgeGroupResponse,
+)
 from app.knowledge_management.dependencies import (
     get_ingestion_service,
     get_knowledge_management_service,
 )
-from app.snapshot.dependencies import get_snapshot_service
-from app.snapshot.service import SnapshotService
 from app.knowledge_management.models import (
     KnowledgeGroup,
     KnowledgeGroupNotFoundError,
     KnowledgeSource,
 )
-from app.knowledge_management.api_schemas import (
-    CreateKnowledgeGroupRequest,
-    KnowledgeGroupResponse,
-)
 from app.knowledge_management.service import KnowledgeManagementService
+from app.snapshot.dependencies import get_snapshot_service
+from app.snapshot.service import SnapshotService
 
 router = APIRouter(tags=["knowledge-management"])
 
