@@ -4,7 +4,7 @@ from bson.datetime_ms import DatetimeMS
 from pymongo.asynchronous.database import AsyncCollection, AsyncDatabase
 from sqlalchemy import select
 
-from app.ingestion.models import KnowledgeVector
+from app.snapshot.models import KnowledgeVector
 from app.snapshot.models import (
     KnowledgeSnapshot,
     KnowledgeVectorResult,
@@ -23,6 +23,10 @@ class AbstractKnowledgeSnapshotRepository(ABC):
     @abstractmethod
     async def list_snapshots_by_group(self, group_id: str) -> list[KnowledgeSnapshot]:
         """List all knowledge snapshots for a specific group"""
+
+    @abstractmethod
+    async def get_latest_by_group(self, group_id: str):
+        """Get the latest knowledge snapshot for a specific group"""
 
 
 class MongoKnowledgeSnapshotRepository(AbstractKnowledgeSnapshotRepository):
@@ -72,6 +76,23 @@ class MongoKnowledgeSnapshotRepository(AbstractKnowledgeSnapshotRepository):
             snapshots.append(snapshot)
 
         return snapshots
+    
+    async def get_latest_by_group(self, group_id: str) -> KnowledgeSnapshot | None:
+        """Get the latest knowledge snapshot for a specific group"""
+        doc = await self.knowledge_snapshots.find_one(
+            {"groupId": group_id},
+            sort=[("version", -1)]
+        )
+
+        if not doc:
+            return None
+
+        return KnowledgeSnapshot(
+            group_id=doc["groupId"],
+            version=doc["version"],
+            created_at=doc["createdAt"],
+            sources=doc["sources"]
+        )
 
 
 class AbstractKnowledgeVectorRepository(ABC):
@@ -107,7 +128,7 @@ class PostgresKnowledgeVectorRepository(AbstractKnowledgeVectorRepository):
 
         await self.session.commit()
 
-    async def query_by_snapshot(self, embedding: list[float], snapshot_id: str, top_k: int) -> list[KnowledgeVectorResult]:
+    async def query_by_snapshot(self, embedding: list[float], snapshot_id: str, max_results: int) -> list[KnowledgeVectorResult]:
         """Query for the top_k most similar knowledge vectors within a specific snapshot."""
 
         query = (
@@ -123,7 +144,7 @@ class PostgresKnowledgeVectorRepository(AbstractKnowledgeVectorRepository):
             )
             .where(KnowledgeVector.snapshot_id == snapshot_id)
             .order_by(KnowledgeVector.embedding.cosine_distance(embedding))
-            .limit(top_k)
+            .limit(max_results)
         )
 
         result = await self.session.execute(query)
@@ -134,7 +155,6 @@ class PostgresKnowledgeVectorRepository(AbstractKnowledgeVectorRepository):
                 content=row.content,
                 similarity_score=1.0 - float(row.distance),
                 created_at=row.created_at,
-                embedding=row.embedding,
                 snapshot_id=row.snapshot_id,
                 source_id=row.source_id,
                 metadata=row.metadata

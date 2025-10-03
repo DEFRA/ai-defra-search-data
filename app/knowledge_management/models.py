@@ -44,7 +44,8 @@ class KnowledgeGroup:
                  description: str = None,
                  owner: str = None,
                  created_at: date = None,
-                 updated_at: date = None):
+                 updated_at: date = None,
+                 active_snapshot: str = None):
 
         if not name.strip():
             msg = "KnowledgeGroup name cannot be empty or whitespace."
@@ -64,6 +65,7 @@ class KnowledgeGroup:
         self.owner = owner
         self.created_at = created_at
         self.updated_at = updated_at
+        self.active_snapshot = active_snapshot
 
         self._sources = set()
 

@@ -2,14 +2,25 @@ from dataclasses import dataclass
 
 
 @dataclass
-class KnowledgeVector:
-    """Domain model for knowledge vectors."""
+class IngestionVector:
+    """Domain model for vectors during ingestion processing."""
 
     content: str
     embedding: list[float]
     snapshot_id: str
     source_id: str
     metadata: dict | None = None
+
+    def to_knowledge_vector(self):
+        """Convert to KnowledgeVector for the snapshot domain."""
+        from app.snapshot.models import KnowledgeVector
+        return KnowledgeVector(
+            content=self.content,
+            embedding=self.embedding,
+            snapshot_id=self.snapshot_id,
+            source_id=self.source_id,
+            metadata=self.metadata
+        )
 
 
 @dataclass(frozen=True)

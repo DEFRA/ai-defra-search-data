@@ -3,7 +3,7 @@ from sqlalchemy import Column, DateTime, Integer, MetaData, String, Table, Text,
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, registry
 
-import app.ingestion.models as model
+import app.snapshot.models as model
 
 
 class Base(DeclarativeBase):

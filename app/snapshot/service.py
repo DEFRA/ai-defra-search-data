@@ -2,8 +2,8 @@ from datetime import datetime, timezone
 from logging import getLogger
 
 from app.common.bedrock import AbstractEmbeddingService
-from app.ingestion.models import KnowledgeVector
-from app.snapshot.models import KnowledgeSnapshot, KnowledgeVectorResult
+from app.snapshot.models import KnowledgeVector
+from app.snapshot.models import KnowledgeSnapshot, KnowledgeSnapshotNotFoundError, KnowledgeVectorResult
 from app.snapshot.repository import (
     AbstractKnowledgeVectorRepository,
     MongoKnowledgeSnapshotRepository,
@@ -21,14 +21,23 @@ class SnapshotService:
             vector_repo: AbstractKnowledgeVectorRepository,
             embedding_service: AbstractEmbeddingService
         ):
-        self.snapshot_repo = snapshot_repo
-        self.vector_repo = vector_repo
-        self.embedding_service = embedding_service
+        self._snapshot_repo = snapshot_repo
+        self._vector_repo = vector_repo
+        self._embedding_service = embedding_service
 
     async def create_snapshot(self, group_id: str, sources: list[dict]):
-        """Create a new knowledge snapshot."""
+        """
+        Create a new knowledge snapshot for a group.
 
-        previous_snapshots = await self.snapshot_repo.list_snapshots_by_group(group_id)
+        Args:
+            group_id: The ID of the knowledge group
+            sources: A list of source metadata dictionaries to include in the snapshot
+
+        Returns:
+            The created KnowledgeSnapshot domain object
+        """
+
+        previous_snapshots = await self._snapshot_repo.list_snapshots_by_group(group_id)
 
         new_version = len(previous_snapshots) + 1
 
@@ -39,26 +48,71 @@ class SnapshotService:
             sources=sources
         )
 
-        await self.snapshot_repo.save(snapshot)
+        await self._snapshot_repo.save(snapshot)
 
         return snapshot
 
+    async def get_latest_by_group(self, group_id: str):
+        """
+        Get the latest knowledge snapshot for a group.
+
+        Args:
+            group_id: The ID of the knowledge group
+
+        Returns:
+            The latest KnowledgeSnapshot object or None if no snapshots exist
+        """
+
+        return await self._snapshot_repo.get_latest_by_group(group_id)
+
     async def get_by_id(self, snapshot_id: str):
-        """Get a knowledge snapshot by its ID"""
-        return await self.snapshot_repo.get_by_id(snapshot_id)
+        """
+        Retrieve knowledge snapshot metadata by its ID.
+
+        Args:
+            snapshot_id: The ID of the knowledge snapshot to retrieve
+        
+        Returns:
+            The found KnowledgeSnapshot object
+
+        Raises:
+            KnowledgeSnapshotNotFoundError: If a snapshot with the given ID does not exist 
+        """
+        
+        snapshot = await self._snapshot_repo.get_by_id(snapshot_id)
+
+        if not snapshot:
+            raise KnowledgeSnapshotNotFoundError(f"Snapshot '{snapshot_id}' not found")
+
+        return snapshot
 
     async def store_vectors(self, vectors: list[KnowledgeVector]) -> None:
-        """Store processed vectors for search operations."""
-        if not vectors:
-            logger.warning("No vectors provided for storage")
-            return
+        """
+        Store a batch of knowledge vectors in the repository.
+
+        Args:
+            vectors: A list of KnowledgeVector objects to store
+        """
 
         logger.info("Storing %d vectors for search operations", len(vectors))
-        await self.vector_repo.add_batch(vectors)
+
+        await self._vector_repo.add_batch(vectors)
+
         logger.info("Successfully stored vectors for search")
 
-    async def search_similar(self, snapshot_id: str, query: str, top_k: int) -> list[KnowledgeVectorResult]:
-        """Search for similar vectors."""
-        logger.info("Searching for top %d similar vectors", top_k)
-        embedding = self.embedding_service.generate_embeddings(query)
-        return await self.vector_repo.query_by_snapshot(embedding, snapshot_id, top_k)
+    async def search_similar(self, snapshot_id: str, query: str, max_results: int) -> list[KnowledgeVectorResult]:
+        """
+        Search for documents similar to the provided query within a specific snapshot.
+
+        Args:
+            snapshot_id: The ID of the knowledge snapshot to base the search on
+            query: The search query string
+            top_k: The maximum number of results to return
+
+        Returns:
+            A list of KnowledgeVectorResult objects representing the most relevant documents
+        """
+        
+        embedding = self._embedding_service.generate_embeddings(query)
+
+        return await self._vector_repo.query_by_snapshot(embedding, snapshot_id, max_results)

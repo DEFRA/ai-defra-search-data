@@ -34,14 +34,14 @@ class MongoKnowledgeGroupRepository(AbstractKnowledgeGroupRepository):
 
     async def save(self, group: KnowledgeGroup) -> None:
         """Save a knowledge group with all its sources"""
-        # First, save or update the group document
         entry_data = {
             "groupId": group.group_id,
             "title": group.name,
             "description": group.description,
             "owner": group.owner,
             "createdAt": DatetimeMS(group.created_at),
-            "updatedAt": DatetimeMS(group.updated_at)
+            "updatedAt": DatetimeMS(group.updated_at),
+            "activeSnapshot": group.active_snapshot
         }
 
         try:
@@ -62,11 +62,9 @@ class MongoKnowledgeGroupRepository(AbstractKnowledgeGroupRepository):
             msg = f"Failed to save knowledge group '{group.group_id}'"
             raise RuntimeError(msg)
 
-        # Insert all sources from the aggregate
         if group.sources:
             source_documents = []
             for source in group.sources:
-                print(source)
                 source_data = {
                     "_id": ObjectId(),
                     "groupId": group.group_id,
@@ -82,8 +80,9 @@ class MongoKnowledgeGroupRepository(AbstractKnowledgeGroupRepository):
 
     async def get_by_id(self, group_id: str) -> KnowledgeGroup | None:
         """Get a complete knowledge group with all its sources loaded"""
-        # Get group document
+
         group_doc = await self.knowledge_groups.find_one({"groupId": group_id})
+
         if not group_doc:
             return None
 
@@ -94,7 +93,8 @@ class MongoKnowledgeGroupRepository(AbstractKnowledgeGroupRepository):
             description=group_doc["description"],
             owner=group_doc["owner"],
             created_at=group_doc["createdAt"],
-            updated_at=group_doc["updatedAt"]
+            updated_at=group_doc["updatedAt"],
+            active_snapshot=group_doc["activeSnapshot"] if "activeSnapshot" in group_doc else None
         )
 
         # Load and add all sources
@@ -116,18 +116,18 @@ class MongoKnowledgeGroupRepository(AbstractKnowledgeGroupRepository):
         groups = []
 
         async for group_doc in cursor:
-            # Create group instance
             group = KnowledgeGroup(
                 group_id=group_doc["groupId"],
                 name=group_doc["title"],
                 description=group_doc["description"],
                 owner=group_doc["owner"],
                 created_at=group_doc["createdAt"],
-                updated_at=group_doc["updatedAt"]
+                updated_at=group_doc["updatedAt"],
+                active_snapshot=group_doc["activeSnapshot"] if "activeSnapshot" in group_doc else None
             )
 
-            # Load and add all sources
             source_cursor = self.knowledge_sources.find({"groupId": group.group_id})
+
             async for source_doc in source_cursor:
                 source = KnowledgeSource(
                     name=source_doc["name"],

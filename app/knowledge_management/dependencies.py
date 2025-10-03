@@ -31,20 +31,10 @@ from app.snapshot.repository import (
 from app.snapshot.service import SnapshotService
 
 
-def get_snapshot_repository(db: AsyncDatabase = Depends(get_db)) -> AbstractKnowledgeSnapshotRepository:
-    """Dependency injection for MongoKnowledgeSnapshotRepository."""
-    return MongoKnowledgeSnapshotRepository(db)
-
-
 def get_knowledge_repository(db: AsyncDatabase = Depends(get_db)) -> AbstractKnowledgeGroupRepository:
     """Dependency injection for MongoKnowledgeGroupRepository."""
     return MongoKnowledgeGroupRepository(db)
 
-
-def get_knowledge_vector_repository(session_factory = Depends(get_async_session_factory)) -> AbstractKnowledgeVectorRepository:
-    """Dependency injection for PostgresKnowledgeVectorRepository."""
-    session = session_factory()
-    return PostgresKnowledgeVectorRepository(session)
 
 def get_ingestion_data_repository() -> AbstractIngestionDataRepository:
     return S3IngestionDataRepository(
@@ -52,17 +42,29 @@ def get_ingestion_data_repository() -> AbstractIngestionDataRepository:
         bucket_name=config.ingestion_data_bucket
     )
 
+
+def get_snapshot_repository_for_ingestion(db: AsyncDatabase = Depends(get_db)) -> AbstractKnowledgeSnapshotRepository:
+    """Dependency injection for MongoKnowledgeSnapshotRepository used by ingestion service."""
+    return MongoKnowledgeSnapshotRepository(db)
+
+
+def get_knowledge_vector_repository_for_ingestion(session_factory = Depends(get_async_session_factory)) -> AbstractKnowledgeVectorRepository:
+    """Dependency injection for PostgresKnowledgeVectorRepository used by ingestion service."""
+    session = session_factory()
+    return PostgresKnowledgeVectorRepository(session)
+
+
 def get_bedrock_embedding_service() -> AbstractEmbeddingService:
     """Dependency injection for BedrockEmbeddingService."""
     return BedrockEmbeddingService(get_bedrock_client(), config.bedrock_embedding_config)
 
 
-def get_snapshot_service(
-        snapshot_repo: AbstractKnowledgeSnapshotRepository = Depends(get_snapshot_repository),
-        vector_repo: AbstractKnowledgeVectorRepository = Depends(get_knowledge_vector_repository),
+def get_snapshot_service_for_ingestion(
+        snapshot_repo: AbstractKnowledgeSnapshotRepository = Depends(get_snapshot_repository_for_ingestion),
+        vector_repo: AbstractKnowledgeVectorRepository = Depends(get_knowledge_vector_repository_for_ingestion),
         embedding_service: AbstractEmbeddingService = Depends(get_bedrock_embedding_service)
     ) -> SnapshotService:
-    """Dependency injection for SnapshotService."""
+    """Dependency injection for SnapshotService used by ingestion service."""
     return SnapshotService(snapshot_repo, vector_repo, embedding_service)
 
 
@@ -73,8 +75,8 @@ def get_knowledge_management_service(group_repo: AbstractKnowledgeGroupRepositor
 
 def get_ingestion_service(
     ingestion_repository: AbstractIngestionDataRepository = Depends(get_ingestion_data_repository),
-    embedding_service: BedrockEmbeddingService = Depends(get_bedrock_embedding_service),
-    snapshot_service: SnapshotService = Depends(get_snapshot_service),
+    embedding_service: AbstractEmbeddingService = Depends(get_bedrock_embedding_service),
+    snapshot_service: SnapshotService = Depends(get_snapshot_service_for_ingestion),
     background_tasks: BackgroundTasks = None
 ) -> IngestionService:
     """Dependency injection for IngestionService."""

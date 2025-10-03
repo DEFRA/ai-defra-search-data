@@ -4,7 +4,7 @@ from logging import getLogger
 from fastapi import BackgroundTasks
 
 from app.common.bedrock import AbstractEmbeddingService
-from app.ingestion.models import KnowledgeVector, NoSourceDataError
+from app.ingestion.models import IngestionVector, NoSourceDataError
 from app.ingestion.repository import AbstractIngestionDataRepository
 from app.knowledge_management.models import KnowledgeGroup, KnowledgeSource
 from app.snapshot.service import SnapshotService
@@ -68,11 +68,13 @@ class IngestionService:
         print(f"Storing {len(vectors)} embedded chunks for source {source.source_id}")
 
         if vectors:
-            await self.snapshot_service.store_vectors(vectors)
+            # Convert IngestionVector to KnowledgeVector for the snapshot domain
+            knowledge_vectors = [vector.to_knowledge_vector() for vector in vectors]
+            await self.snapshot_service.store_vectors(knowledge_vectors)
 
-        logger.info("Processing completed for source: %s", source.name)
+        logger.info("Processing completed for source: %s", source.source_id)
 
-    async def _process_chunked_data(self, file: bytes, snapshot_id: str, source_id: str) -> list[KnowledgeVector]:
+    async def _process_chunked_data(self, file: bytes, snapshot_id: str, source_id: str) -> list[IngestionVector]:
         """
         Process pre-chunked data from a file: read content, generate embeddings, and prepare vectors.
         Returns processed vectors ready for search storage.
@@ -88,7 +90,7 @@ class IngestionService:
         for chunk_no in range(len(chunks)):
             chunk = chunks[chunk_no]
             embedding = self.embedding_service.generate_embeddings(chunk["text"])
-            vector = KnowledgeVector(
+            vector = IngestionVector(
                 content=chunk["text"],
                 embedding=embedding,
                 snapshot_id=snapshot_id,

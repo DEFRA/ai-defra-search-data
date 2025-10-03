@@ -43,11 +43,18 @@ async def get_sql_engine() -> AsyncEngine:
             connect_args={
                 "sslmode": config.postgres.ssl_mode,
                 "sslrootcert": cert
-            }
+            },
+            hide_parameters=config.python_env != "development"
         )
     else:
         logger.info("Creating Postgres SQLAlchemy engine without custom TLS cert")
-        engine = create_async_engine(url)
+        engine = create_async_engine(
+            url,
+            connect_args={
+                "sslmode": config.postgres.ssl_mode
+            },
+            hide_parameters=config.python_env != "development"
+        )
 
     start_mappers()
     logger.info("SQLAlchemy ORM mappers started")

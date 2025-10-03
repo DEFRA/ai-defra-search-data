@@ -11,6 +11,7 @@ from app.common.tracing import TraceIdMiddleware
 from app.health.router import router as health_router
 from app.infra.mcp_server import data_mcp_server
 from app.knowledge_management.router import router as knowledge_management_router
+from app.snapshot.router import router as snapshot_router
 
 logger = getLogger(__name__)
 
@@ -60,5 +61,6 @@ app.add_middleware(TraceIdMiddleware)
 # Setup Routes
 app.include_router(health_router)
 app.include_router(knowledge_management_router)
+app.include_router(snapshot_router)
 
 app.mount("/", mcp_app)

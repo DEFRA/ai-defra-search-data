@@ -7,12 +7,14 @@ from app.knowledge_management.dependencies import (
     get_ingestion_service,
     get_knowledge_management_service,
 )
+from app.snapshot.dependencies import get_snapshot_service
+from app.snapshot.service import SnapshotService
 from app.knowledge_management.models import (
     KnowledgeGroup,
     KnowledgeGroupNotFoundError,
     KnowledgeSource,
 )
-from app.knowledge_management.request_schemas import (
+from app.knowledge_management.api_schemas import (
     CreateKnowledgeGroupRequest,
     KnowledgeGroupResponse,
 )
@@ -110,6 +112,35 @@ async def get_group(group_id: str, service: KnowledgeManagementService = Depends
         )
     except KnowledgeGroupNotFoundError as err:
         raise HTTPException(status_code=404, detail=f"Knowledge group with ID '{group_id}' not found") from err
+
+
+@router.get("/knowledge/groups/{group_id}/snapshots", response_model=list[dict])
+async def list_group_snapshots(
+    group_id: str,
+    service: SnapshotService = Depends(get_snapshot_service)
+):
+    """
+    List all snapshots for a specific knowledge group.
+
+    Args:
+        group_id: The ID of the knowledge group
+        service: Service dependency injection
+
+    Returns:
+        A list of snapshots for the group
+    """
+    snapshots = await service._snapshot_repo.list_snapshots_by_group(group_id)
+
+    return [
+        {
+            "snapshot_id": snapshot.snapshot_id,
+            "group_id": snapshot.group_id,
+            "version": snapshot.version,
+            "created_at": snapshot.created_at.isoformat(),
+            "sources": [source.__dict__ for source in snapshot.sources]
+        }
+        for snapshot in snapshots
+    ]
 
 
 @router.post("/knowledge/groups/{group_id}/ingest", status_code=status.HTTP_202_ACCEPTED)

@@ -57,3 +57,19 @@ class KnowledgeManagementService:
 
         msg = f"Knowledge entry with group ID '{group_id}' not found"
         raise KnowledgeGroupNotFoundError(msg)
+
+    async def set_active_snapshot(self, group_id: str, snapshot_id: str) -> None:
+        """
+        Set the active snapshot for a knowledge group.
+
+        Args:
+            group_id: The group ID of the knowledge entry to update
+            snapshot_id: The snapshot ID to set as active
+        """
+        group = await self.find_knowledge_group(group_id)
+
+        group.active_snapshot = snapshot_id
+
+        await self.group_repo.save(group)
+
+        logger.info("Set active snapshot for group %s to %s", group_id, snapshot_id)

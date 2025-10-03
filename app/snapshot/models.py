@@ -4,6 +4,17 @@ from datetime import date, datetime
 from app.knowledge_management.models import KnowledgeSource
 
 
+@dataclass
+class KnowledgeVector:
+    """Domain model for knowledge vectors."""
+
+    content: str
+    embedding: list[float]
+    snapshot_id: str
+    source_id: str
+    metadata: dict | None = None
+
+
 @dataclass(frozen=True)
 class KnowledgeVectorResult:
     """Represents a knowledge search result with similarity scoring."""
@@ -12,7 +23,6 @@ class KnowledgeVectorResult:
     similarity_score: float  # 0.0 to 1.0, higher is more similar
     created_at: datetime
 
-    embedding: list[float] | None = None
     snapshot_id: str | None = None
     source_id: str | None = None
     metadata: dict | None = None
@@ -45,3 +55,11 @@ class KnowledgeSnapshot:
 
     def add_source(self, source: KnowledgeSource):
         self.sources.add(source)
+
+
+class KnowledgeSnapshotNotFoundError(Exception):
+    """Exception raised when a knowledge snapshot is not found."""
+
+
+class NoActiveSnapshotError(Exception):
+    """Exception raised when a knowledge group has no active snapshot."""
