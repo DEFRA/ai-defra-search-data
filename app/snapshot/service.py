@@ -2,11 +2,13 @@ from datetime import datetime, timezone
 from logging import getLogger
 
 from app.common.bedrock import AbstractEmbeddingService
+from app.knowledge_management.models import KnowledgeGroup
 from app.snapshot.models import (
     KnowledgeSnapshot,
     KnowledgeSnapshotNotFoundError,
     KnowledgeVector,
     KnowledgeVectorResult,
+    NoActiveSnapshotError,
 )
 from app.snapshot.repository import (
     AbstractKnowledgeVectorRepository,
@@ -105,7 +107,7 @@ class SnapshotService:
 
         logger.info("Successfully stored vectors for search")
 
-    async def search_similar(self, snapshot_id: str, query: str, max_results: int) -> list[KnowledgeVectorResult]:
+    async def search_similar(self, group: KnowledgeGroup, query: str, max_results: int) -> list[KnowledgeVectorResult]:
         """
         Search for documents similar to the provided query within a specific snapshot.
 
@@ -116,8 +118,18 @@ class SnapshotService:
 
         Returns:
             A list of KnowledgeVectorResult objects representing the most relevant documents
+
+        Raises:
+            KnowledgeSnapshotNotFoundError: If the snapshot with the given ID does not exist
+            NoActiveSnapshotError: If the knowledge group has no active snapshot
         """
+        
+        if not group.active_snapshot:
+            msg = f"Knowledge group with ID '{group.group_id}' has no active snapshot"
+            raise NoActiveSnapshotError(msg)
+        
+        await self.get_by_id(group.active_snapshot)
 
         embedding = self._embedding_service.generate_embeddings(query)
 
-        return await self._vector_repo.query_by_snapshot(embedding, snapshot_id, max_results)
+        return await self._vector_repo.query_by_snapshot(embedding, group, max_results)

@@ -35,17 +35,7 @@ async def relevant_sources_by_group(group_id: str, query: str, max_results: int 
 
     group = await knowledge_service.find_knowledge_group(group_id)
 
-    if not group:
-        msg = f"Knowledge group with ID '{group_id}' not found"
-        raise KnowledgeGroupNotFoundError(msg)
-
-    if not group.active_snapshot:
-        msg = f"Knowledge group with ID '{group_id}' has no active snapshot"
-        raise NoActiveSnapshotError(msg)
-
-    snapshot_id = group.active_snapshot
-
-    documents = await snapshot_service.search_similar(snapshot_id, query, max_results)
+    documents = await snapshot_service.search_similar(group, query, max_results)
 
     print(documents)
 

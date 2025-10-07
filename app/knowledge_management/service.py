@@ -72,4 +72,4 @@ class KnowledgeManagementService:
 
         await self.group_repo.save(group)
 
-        logger.info("Set active snapshot for group %s to %s", group_id, snapshot_id)
+        logger.info("Set active snapshot for group %s to %s", group_id, group.active_snapshot)
