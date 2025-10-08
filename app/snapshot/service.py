@@ -132,4 +132,4 @@ class SnapshotService:
 
         embedding = self._embedding_service.generate_embeddings(query)
 
-        return await self._vector_repo.query_by_snapshot(embedding, group, max_results)
+        return await self._vector_repo.query_by_snapshot(embedding, group.active_snapshot, max_results)

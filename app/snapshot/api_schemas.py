@@ -1,6 +1,14 @@
 from pydantic import BaseModel, Field
 
 
+class QuerySnapshotRequest(BaseModel):
+    """ Request model for querying a snapshot. """
+
+    group_id: str = Field(..., description="The ID of the knowledge group", validation_alias="groupId")
+    query: str = Field(..., description="The search query")
+    max_results: int = Field(5, description="Maximum number of results to return", validation_alias="maxResults")
+
+
 class KnowledgeSnapshotResponse(BaseModel):
     """ Response model for a knowledge group. """
 
@@ -18,6 +26,5 @@ class KnowledgeVectorResultResponse(BaseModel):
     similarity_score: float = Field(..., description="The similarity score of the result (0.0 to 1.0)", serialization_alias="similarityScore")
     similarity_category: str = Field(..., description="The similarity category of the result (very_high, high, medium, low)", serialization_alias="similarityCategory")
     created_at: str = Field(..., description="The creation date of the knowledge vector result in ISO format", serialization_alias="createdAt")
-    source: dict | None = Field(None, description="The source metadata associated with the knowledge vector result")
     metadata: dict | None = Field(None, description="Additional metadata associated with the knowledge vector result")
 

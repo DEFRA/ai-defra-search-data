@@ -50,8 +50,7 @@ def get_snapshot_repository_for_ingestion(db: AsyncDatabase = Depends(get_db)) -
 
 def get_knowledge_vector_repository_for_ingestion(session_factory = Depends(get_async_session_factory)) -> AbstractKnowledgeVectorRepository:
     """Dependency injection for PostgresKnowledgeVectorRepository used by ingestion service."""
-    session = session_factory()
-    return PostgresKnowledgeVectorRepository(session)
+    return PostgresKnowledgeVectorRepository(session_factory)
 
 
 def get_bedrock_embedding_service() -> AbstractEmbeddingService:

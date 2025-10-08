@@ -108,57 +108,58 @@ class AbstractKnowledgeVectorRepository(ABC):
 class PostgresKnowledgeVectorRepository(AbstractKnowledgeVectorRepository):
     """PostgreSQL implementation of KnowledgeVectorRepository using pgvector."""
 
-    def __init__(self, session):
+    def __init__(self, session_factory):
         """
         Initialize with SQLAlchemy async session.
 
         Args:
-            session: Async SQLAlchemy session
+            session: An asynchronous SQLAlchemy session factory
         """
-        self.session = session
+        self.session_factory = session_factory
 
     async def add(self, knowledge_vector: KnowledgeVector) -> None:
         """Add a knowledge vector entry to PostgreSQL."""
-        self.session.add(knowledge_vector)
-        await self.session.commit()
+        async with self.session_factory() as session:
+            session.add(knowledge_vector)
+            await session.commit()
 
     async def add_batch(self, vectors: list[KnowledgeVector]) -> None:
         """Add multiple knowledge vector entries to PostgreSQL in batch."""
-        self.session.add_all(vectors)
-
-        await self.session.commit()
+        async with self.session_factory() as session:
+            session.add_all(vectors)
+            await session.commit()
 
     async def query_by_snapshot(self, embedding: list[float], snapshot_id: str, max_results: int) -> list[KnowledgeVectorResult]:
         """Query for the top_k most similar knowledge vectors within a specific snapshot."""
-
-        query = (
-            select(
-                KnowledgeVector.id,
-                KnowledgeVector.content,
-                KnowledgeVector.embedding,
-                KnowledgeVector.created_at,
-                KnowledgeVector.snapshot_id,
-                KnowledgeVector.source_id,
-                KnowledgeVector.metadata,
-                KnowledgeVector.embedding.cosine_distance(embedding).label("distance")
+        async with self.session_factory() as session:
+            query = (
+                select(
+                    KnowledgeVector.id,
+                    KnowledgeVector.content,
+                    KnowledgeVector.embedding,
+                    KnowledgeVector.created_at,
+                    KnowledgeVector.snapshot_id,
+                    KnowledgeVector.source_id,
+                    KnowledgeVector.metadata,
+                    KnowledgeVector.embedding.cosine_distance(embedding).label("distance")
+                )
+                .where(KnowledgeVector.snapshot_id == snapshot_id)
+                .order_by(KnowledgeVector.embedding.cosine_distance(embedding))
+                .limit(max_results)
             )
-            .where(KnowledgeVector.snapshot_id == snapshot_id)
-            .order_by(KnowledgeVector.embedding.cosine_distance(embedding))
-            .limit(max_results)
-        )
 
-        result = await self.session.execute(query)
-        rows = result.fetchall()
+            result = await session.execute(query)
+            rows = result.fetchall()
 
-        return [
-            KnowledgeVectorResult(
-                content=row.content,
-                similarity_score=1.0 - float(row.distance),
-                created_at=row.created_at,
-                snapshot_id=row.snapshot_id,
-                source_id=row.source_id,
-                metadata=row.metadata
-            )
-            for row in rows
-        ]
+            return [
+                KnowledgeVectorResult(
+                    content=row.content,
+                    similarity_score=1.0 - float(row.distance),
+                    created_at=row.created_at,
+                    snapshot_id=row.snapshot_id,
+                    source_id=row.source_id,
+                    metadata=row.metadata
+                )
+                for row in rows
+            ]
 

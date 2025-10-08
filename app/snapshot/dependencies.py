@@ -27,8 +27,7 @@ def get_snapshot_repository(db: AsyncDatabase = Depends(get_db)) -> AbstractKnow
 
 def get_knowledge_vector_repository(session_factory = Depends(get_async_session_factory)) -> AbstractKnowledgeVectorRepository:
     """Dependency injection for PostgresKnowledgeVectorRepository."""
-    session = session_factory()
-    return PostgresKnowledgeVectorRepository(session)
+    return PostgresKnowledgeVectorRepository(session_factory)
 
 
 def get_bedrock_embedding_service() -> AbstractEmbeddingService:

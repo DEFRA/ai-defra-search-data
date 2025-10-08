@@ -23,10 +23,9 @@ async def relevant_sources_by_group(group_id: str, query: str, max_results: int 
 
     db = await get_db(await get_mongo_client())
     session_factory = await get_async_session_factory()
-    session = session_factory()
 
     snapshot_repo = MongoKnowledgeSnapshotRepository(db)
-    vector_repo = PostgresKnowledgeVectorRepository(session)
+    vector_repo = PostgresKnowledgeVectorRepository(session_factory)
     group_repo = MongoKnowledgeGroupRepository(db)
 
     embedding_service = BedrockEmbeddingService(get_bedrock_client(), config.bedrock_embedding_config)

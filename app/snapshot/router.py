@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from app.knowledge_management.dependencies import get_knowledge_management_service
 from app.knowledge_management.models import KnowledgeGroupNotFoundError
 from app.knowledge_management.service import KnowledgeManagementService
+from app.snapshot.api_schemas import KnowledgeVectorResultResponse, QuerySnapshotRequest
 from app.snapshot.dependencies import get_snapshot_service
 from app.snapshot.models import KnowledgeSnapshotNotFoundError, NoActiveSnapshotError
 from app.snapshot.service import SnapshotService
@@ -48,11 +49,9 @@ async def get_snapshot(
     }
 
 
-@router.post("/snapshots/query", response_model=list)
+@router.post("/snapshots/query", response_model=list[KnowledgeVectorResultResponse])
 async def query_snapshot(
-    group_id: str,
-    query: str,
-    max_results: int = 5,
+    request: QuerySnapshotRequest,
     knowledge_service: KnowledgeManagementService = Depends(get_knowledge_management_service),
     snp_service: SnapshotService = Depends(get_snapshot_service)
 ):
@@ -60,34 +59,43 @@ async def query_snapshot(
     Query a snapshot for relevant documents based on a search query.
 
     Args:
-        group_id: The ID of the knowledge group
-        query: The search query
-        max_results: Maximum number of results to return
-        service: Service dependency injection
+        request: The query request containing group_id, query, and max_results
+        knowledge_service: Knowledge management service dependency injection
+        snp_service: Snapshot service dependency injection
     Returns:
         A list of relevant documents
     """
 
     try:
-        group = await knowledge_service.find_knowledge_group(group_id)
+        group = await knowledge_service.find_knowledge_group(request.group_id)
 
         if not group.active_snapshot:
-            msg = f"Knowledge group with ID '{group_id}' has no active snapshot"
+            msg = f"Knowledge group with ID '{request.group_id}' has no active snapshot"
             raise NoActiveSnapshotError(msg)
 
-        documents = snp_service.search_similar(group.active_snapshot, query, max_results)
+        documents = await snp_service.search_similar(group, request.query, request.max_results)
     except KnowledgeGroupNotFoundError as err:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Knowledge group with ID '{group_id}' not found"
+            detail=f"Knowledge group with ID '{request.group_id}' not found"
         ) from err
     except NoActiveSnapshotError as err:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Knowledge group with ID '{group_id}' has no active snapshot"
+            detail=f"Knowledge group with ID '{request.group_id}' has no active snapshot"
         ) from err
 
-    return [doc.__dict__ for doc in documents]
+    # Convert domain models to response models
+    return [
+        KnowledgeVectorResultResponse(
+            content=doc.content,
+            similarity_score=doc.similarity_score,
+            similarity_category=doc.similarity_category,
+            created_at=doc.created_at.isoformat(),
+            metadata=doc.metadata
+        )
+        for doc in documents
+    ]
 
 
 @router.patch("/snapshots/{snapshot_id}/activate", status_code=status.HTTP_200_OK)
