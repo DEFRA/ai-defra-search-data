@@ -36,6 +36,4 @@ async def relevant_sources_by_group(group_id: str, query: str, max_results: int 
 
     documents = await snapshot_service.search_similar(group, query, max_results)
 
-    print(documents)
-
     return documents

@@ -92,7 +92,9 @@ async def query_snapshot(
             similarity_score=doc.similarity_score,
             similarity_category=doc.similarity_category,
             created_at=doc.created_at.isoformat(),
-            metadata=doc.metadata
+            source_id=doc.source_id,
+            snapshot_id=doc.snapshot_id,
+            title=doc.metadata.get("title", "Untitled") if doc.metadata else "Untitled"
         )
         for doc in documents
     ]

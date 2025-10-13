@@ -12,6 +12,7 @@ class SourceType(Enum):
     BLOB = "BLOB"
     PRECHUNKED_BLOB = "PRECHUNKED_BLOB"
 
+
 class KnowledgeSource:
     """ Represents the source of a knowledge entry. """
 
