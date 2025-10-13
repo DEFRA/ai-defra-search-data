@@ -74,6 +74,21 @@ async def query_snapshot(
             raise NoActiveSnapshotError(msg)
 
         documents = await snp_service.search_similar(group, request.query, request.max_results)
+
+        print(documents)
+
+        return [
+            KnowledgeVectorResultResponse(
+                content=doc.content,
+                similarity_score=doc.similarity_score,
+                similarity_category=doc.similarity_category,
+                created_at=doc.created_at.isoformat(),
+                source_id=doc.source_id,
+                snapshot_id=doc.snapshot_id,
+                title=doc.metadata.get("title", "Untitled") if doc.metadata else "Untitled"
+            )
+            for doc in documents
+        ]
     except KnowledgeGroupNotFoundError as err:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -84,20 +99,6 @@ async def query_snapshot(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Knowledge group with ID '{request.group_id}' has no active snapshot"
         ) from err
-
-    # Convert domain models to response models
-    return [
-        KnowledgeVectorResultResponse(
-            content=doc.content,
-            similarity_score=doc.similarity_score,
-            similarity_category=doc.similarity_category,
-            created_at=doc.created_at.isoformat(),
-            source_id=doc.source_id,
-            snapshot_id=doc.snapshot_id,
-            title=doc.metadata.get("title", "Untitled") if doc.metadata else "Untitled"
-        )
-        for doc in documents
-    ]
 
 
 @router.patch("/snapshots/{snapshot_id}/activate", status_code=status.HTTP_200_OK)
