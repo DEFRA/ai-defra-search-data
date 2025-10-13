@@ -4,10 +4,9 @@ from app.common.mongo import get_db, get_mongo_client
 from app.common.postgres import get_async_session_factory
 from app.config import config
 from app.infra.mcp_server import data_mcp_server
-from app.knowledge_management.models import KnowledgeGroupNotFoundError
 from app.knowledge_management.repository import MongoKnowledgeGroupRepository
 from app.knowledge_management.service import KnowledgeManagementService
-from app.snapshot.models import KnowledgeVectorResult, NoActiveSnapshotError
+from app.snapshot.models import KnowledgeVectorResult
 from app.snapshot.repository import (
     MongoKnowledgeSnapshotRepository,
     PostgresKnowledgeVectorRepository,
@@ -34,6 +33,4 @@ async def relevant_sources_by_group(group_id: str, query: str, max_results: int 
 
     group = await knowledge_service.find_knowledge_group(group_id)
 
-    documents = await snapshot_service.search_similar(group, query, max_results)
-
-    return documents
+    return await snapshot_service.search_similar(group, query, max_results)

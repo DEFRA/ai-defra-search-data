@@ -123,11 +123,11 @@ class SnapshotService:
             KnowledgeSnapshotNotFoundError: If the snapshot with the given ID does not exist
             NoActiveSnapshotError: If the knowledge group has no active snapshot
         """
-        
+
         if not group.active_snapshot:
             msg = f"Knowledge group with ID '{group.group_id}' has no active snapshot"
             raise NoActiveSnapshotError(msg)
-        
+
         await self.get_by_id(group.active_snapshot)
 
         embedding = self._embedding_service.generate_embeddings(query)
