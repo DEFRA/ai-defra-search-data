@@ -6,8 +6,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class BedrockEmbeddingConfig(BaseSettings):
     model_config = SettingsConfigDict()
     model_id: str = Field(..., alias="BEDROCK_EMBEDDING_MODEL_ID")
-    guardrail_identifier: str | None = Field(default=None, alias="EMBEDDING_MODEL_GUARDRAIL_IDENTIFIER")
-    guardrail_version: str | None = Field(default=None, alias="EMBEDDING_MODEL_GUARDRAIL_VERSION")
 
 
 class PostgresConfig(BaseSettings):
