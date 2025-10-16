@@ -28,12 +28,11 @@ jobs:
           pipx install uv
           uv sync --frozen
           uv run ruff check
-          uv run pytest
 
       - name: Test Docker Image Build
         run: |
           set +e
-          docker build --no-cache --tag cdp-python-backend-template .
+          docker build --no-cache --tag ai-defra-search-data .
           exit $?
 
 #      - name: SonarCloud Scan

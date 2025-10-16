@@ -1,24 +1,13 @@
 # ai-defra-search-data
 
-This is work-in-progress. See [To Do List](./TODO.md)
+A agentic workflow that demonstrates client-side Model Context Protocol (MCP) usage within a FastAPI application.
 
-- [ai-defra-search-data](#ai-defra-search-data)
-  - [Requirements](#requirements)
-    - [Python](#python)
-    - [Linting and Formatting](#linting-and-formatting)
-    - [Docker](#docker)
-  - [Local development](#local-development)
-    - [Setup & Configuration](#setup--configuration)
-    - [Development](#development)
-    - [Testing](#testing)
-    - [Production Mode](#production-mode)
-  - [API endpoints](#api-endpoints)
-  - [Custom Cloudwatch Metrics](#custom-cloudwatch-metrics)
-  - [Pipelines](#pipelines)
-    - [Dependabot](#dependabot)
-    - [SonarCloud](#sonarcloud)
-  - [Licence](#licence)
-    - [About the licence](#about-the-licence)
+## Prequisites
+- [Python](https://docs.python.org/3/using/index.html) `>= 3.12` - We recommend using [uv](https://docs.astral.sh/uv/getting-started/installation/) to manage your Python environment.
+- [pipx](https://pipxproject.github.io/pipx/installation/)
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) 
+- [Docker and Docker Compose](https://docs.docker.com/get-docker/) - Optional if using startup script.
+- [MCP Inspector](https://github.com/modelcontextprotocol/inspector) - Optional, but recommended for developing against MCP server.
 
 ## Requirements
 
@@ -32,12 +21,6 @@ pipx install uv
 
 # sync dependencies
 uv sync
-
-# source python venv
-source .venv/bin/activate
-
-# install the pre-commit hooks
-pre-commit install
 ```
 
 This opinionated template uses the [`Fast API`](https://fastapi.tiangolo.com/) Python API framework.
@@ -67,67 +50,6 @@ uv run ruff check . --fix
 # Run formatting
 uv run ruff format .
 ```
-
-#### Pre-commit Hooks
-
-This project uses [pre-commit](https://pre-commit.com/) to run linting and formatting checks automatically before each commit.
-
-The pre-commit configuration is defined in `.pre-commit-config.yaml`
-
-To set up pre-commit hooks:
-
-```bash
-# Set up the git hooks
-pre-commit install
-```
-
-To run the hooks manually on all files:
-
-```bash
-pre-commit run --all-files
-```
-
-#### VS Code Configuration
-
-For the best development experience, configure VS Code to use Ruff:
-
-1. Install the [Ruff extension](https://marketplace.visualstudio.com/items?itemName=charliermarsh.ruff) for VS Code
-2. Configure your VS Code settings (`.vscode/settings.json`):
-
-```json
-{
-    "editor.formatOnSave": true,
-    "editor.codeActionsOnSave": {
-        "source.fixAll.ruff": "explicit",
-        "source.organizeImports.ruff": "explicit"
-    },
-    "ruff.lint.run": "onSave",
-    "[python]": {
-        "editor.defaultFormatter": "charliermarsh.ruff",
-        "editor.formatOnSave": true,
-        "editor.codeActionsOnSave": {
-            "source.fixAll.ruff": "explicit",
-            "source.organizeImports.ruff": "explicit"
-        }
-    }
-}
-```
-
-This configuration will:
-
-- Format your code with Ruff when you save a file
-- Fix linting issues automatically when possible
-- Organize imports according to isort rules
-
-#### Ruff Configuration
-
-Ruff is configured in the `.ruff.toml` file
-
-### Docker
-
-This repository uses Docker throughput its lifecycle i.e. both for local development and the environments. A benefit of this is that environment variables & secrets are managed consistently throughout the lifecycle
-
-See the `Dockerfile` and `compose.yml` for details
 
 ## Local development
 
@@ -194,28 +116,13 @@ uv run pytest
 
 | Endpoint             | Description                    |
 | :------------------- | :----------------------------- |
-| `GET: /docs`         | Automatic API Swagger docs     |
 | `GET: /health`       | Health check endpoint          |
-| `GET: /example/test` | Simple example endpoint        |
-| `GET: /example/db`   | Database query example         |
-| `GET: /example/http` | HTTP client example            |
 
 ## Custom Cloudwatch Metrics
 
 Uses the [aws embedded metrics library](https://github.com/awslabs/aws-embedded-metrics-python). An example can be found in `metrics.py`
 
 In order to make this library work in the environments, the environment variable `AWS_EMF_ENVIRONMENT=local` is set in the app config. This tells the library to use the local cloudwatch agent that has been configured in CDP, and uses the environment variables set up in CDP `AWS_EMF_AGENT_ENDPOINT`, `AWS_EMF_LOG_GROUP_NAME`, `AWS_EMF_LOG_STREAM_NAME`, `AWS_EMF_NAMESPACE`, `AWS_EMF_SERVICE_NAME`
-
-## Pipelines
-
-### Dependabot
-
-We have added an example dependabot configuration file to the repository. You can enable it by renaming
-the [.github/example.dependabot.yml](.github/example.dependabot.yml) to `.github/dependabot.yml`
-
-### SonarCloud
-
-Instructions for setting up SonarCloud can be found in [sonar-project.properties](./sonar-project.properties)
 
 ## Licence
 
