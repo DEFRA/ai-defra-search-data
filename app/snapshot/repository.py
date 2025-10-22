@@ -48,7 +48,7 @@ class MongoKnowledgeSnapshotRepository(AbstractKnowledgeSnapshotRepository):
                     "sourceId": source.source_id,
                     "name": source.name,
                     "location": source.location,
-                    "source_type": source.source_type
+                    "sourceType": source.source_type
                 }
                 for source in snapshot.sources.values()
             ]
@@ -75,7 +75,7 @@ class MongoKnowledgeSnapshotRepository(AbstractKnowledgeSnapshotRepository):
                     source_id=source_doc["sourceId"],
                     name=source_doc["name"],
                     location=source_doc["location"],
-                    source_type=source_doc["source_type"]
+                    source_type=source_doc["sourceType"]
                 )
             )
 

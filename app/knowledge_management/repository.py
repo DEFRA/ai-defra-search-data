@@ -67,7 +67,6 @@ class MongoKnowledgeGroupRepository(AbstractKnowledgeGroupRepository):
                 source_data = {
                     "_id": ObjectId(),
                     "groupId": group.group_id,
-                    "parent_group_id": group_doc["_id"],
                     "sourceId": source.source_id,
                     "name": source.name,
                     "sourceType": str(source.source_type),
@@ -96,8 +95,8 @@ class MongoKnowledgeGroupRepository(AbstractKnowledgeGroupRepository):
             active_snapshot=group_doc.get("activeSnapshot", None)
         )
 
-        # Load and add all sources
         cursor = self.knowledge_sources.find({"groupId": group_id})
+
         async for source_doc in cursor:
             source = KnowledgeSource(
                 name=source_doc["name"],
@@ -130,10 +129,11 @@ class MongoKnowledgeGroupRepository(AbstractKnowledgeGroupRepository):
             async for source_doc in source_cursor:
                 source = KnowledgeSource(
                     name=source_doc["name"],
-                    source_type=source_doc["source_type"],
+                    source_type=source_doc["sourceType"],
                     location=source_doc["location"],
                     source_id=source_doc["sourceId"]
                 )
+
                 group.add_source(source)
 
             groups.append(group)
