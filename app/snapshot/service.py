@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from logging import getLogger
 
 from app.common.bedrock import AbstractEmbeddingService
@@ -31,7 +31,7 @@ class SnapshotService:
         self._vector_repo = vector_repo
         self._embedding_service = embedding_service
 
-    async def create_snapshot(self, group_id: str, sources: list[dict]):
+    async def create_snapshot(self, group_id: str, sources: list[dict]) -> KnowledgeSnapshot:
         """
         Create a new knowledge snapshot for a group.
 
@@ -50,9 +50,11 @@ class SnapshotService:
         snapshot = KnowledgeSnapshot(
             group_id=group_id,
             version=new_version,
-            created_at=datetime.now(tz=timezone.utc),
-            sources=sources
+            created_at=datetime.now(tz=UTC)
         )
+
+        for source in sources:
+            snapshot.add_source(source)
 
         await self._snapshot_repo.save(snapshot)
 
@@ -128,8 +130,19 @@ class SnapshotService:
             msg = f"Knowledge group with ID '{group.group_id}' has no active snapshot"
             raise NoActiveSnapshotError(msg)
 
-        await self.get_by_id(group.active_snapshot)
+        snapshot = await self.get_by_id(group.active_snapshot)
 
         embedding = self._embedding_service.generate_embeddings(query)
 
-        return await self._vector_repo.query_by_snapshot(embedding, group.active_snapshot, max_results)
+        documents = await self._vector_repo.query_by_snapshot(embedding, group.active_snapshot, max_results)
+
+        for doc in documents:
+            source = snapshot.sources[doc.source_id]
+
+            if not source:
+                continue
+
+            doc.name = source.name
+            doc.location = source.location
+
+        return documents

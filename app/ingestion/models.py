@@ -22,11 +22,9 @@ class IngestionVector:
             metadata=self.metadata
         )
 
-
 @dataclass(frozen=True)
 class ChunkData:
     source: str
-    chunk_id: int
     text: str
 
 

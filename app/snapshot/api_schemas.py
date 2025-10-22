@@ -26,6 +26,7 @@ class KnowledgeVectorResultResponse(BaseModel):
     similarity_score: float = Field(description="The similarity score of the result (0.0 to 1.0)", serialization_alias="similarityScore")
     similarity_category: str = Field(description="The similarity category of the result (very_high, high, medium, low)", serialization_alias="similarityCategory")
     created_at: str = Field(description="The creation date of the knowledge vector result in ISO format", serialization_alias="createdAt")
-    title: str = Field(description="The title of the knowledge vector result")
+    name: str = Field(description="The name of the knowledge vector result")
+    location: str = Field(description="The location of the knowledge vector result")
     snapshot_id: str = Field(description="Internal ID representing the snapshot used", serialization_alias="snapshotId")
     source_id: str = Field(description="Internal ID representing the source document", serialization_alias="sourceId")

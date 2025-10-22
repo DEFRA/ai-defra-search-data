@@ -34,7 +34,7 @@ class MongoKnowledgeGroupRepository(AbstractKnowledgeGroupRepository):
 
     async def save(self, group: KnowledgeGroup) -> None:
         """Save a knowledge group with all its sources"""
-        entry_data = {
+        group_data = {
             "groupId": group.group_id,
             "title": group.name,
             "description": group.description,
@@ -48,14 +48,13 @@ class MongoKnowledgeGroupRepository(AbstractKnowledgeGroupRepository):
             # Use upsert to handle both insert and update
             await self.knowledge_groups.update_one(
                 {"groupId": group.group_id},
-                {"$set": entry_data},
+                {"$set": group_data},
                 upsert=True
             )
         except DuplicateKeyError:
             msg = f"Knowledge entry with group_id '{group.group_id}' already exists"
             raise KnowledgeGroupAlreadyExistsError(msg) from None
 
-        # Get the group document to get the ObjectId
         group_doc = await self.knowledge_groups.find_one({"groupId": group.group_id})
 
         if not group_doc:
@@ -64,14 +63,13 @@ class MongoKnowledgeGroupRepository(AbstractKnowledgeGroupRepository):
 
         if group.sources:
             source_documents = []
-            for source in group.sources:
+            for source in group.sources.values():
                 source_data = {
                     "_id": ObjectId(),
                     "groupId": group.group_id,
-                    "parent_group_id": group_doc["_id"],
                     "sourceId": source.source_id,
                     "name": source.name,
-                    "source_type": str(source.source_type),
+                    "sourceType": str(source.source_type),
                     "location": source.location
                 }
                 source_documents.append(source_data)
@@ -97,12 +95,12 @@ class MongoKnowledgeGroupRepository(AbstractKnowledgeGroupRepository):
             active_snapshot=group_doc.get("activeSnapshot", None)
         )
 
-        # Load and add all sources
         cursor = self.knowledge_sources.find({"groupId": group_id})
+
         async for source_doc in cursor:
             source = KnowledgeSource(
                 name=source_doc["name"],
-                source_type=source_doc["source_type"],
+                source_type=source_doc["sourceType"],
                 location=source_doc["location"],
                 source_id=source_doc["sourceId"]
             )
@@ -131,10 +129,11 @@ class MongoKnowledgeGroupRepository(AbstractKnowledgeGroupRepository):
             async for source_doc in source_cursor:
                 source = KnowledgeSource(
                     name=source_doc["name"],
-                    source_type=source_doc["source_type"],
+                    source_type=source_doc["sourceType"],
                     location=source_doc["location"],
                     source_id=source_doc["sourceId"]
                 )
+
                 group.add_source(source)
 
             groups.append(group)
