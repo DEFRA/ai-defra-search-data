@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+from app.knowledge_management.models import KnowledgeSource
 from bson.datetime_ms import DatetimeMS
 from pymongo.asynchronous.database import AsyncCollection, AsyncDatabase
 from sqlalchemy import select
@@ -42,7 +43,15 @@ class MongoKnowledgeSnapshotRepository(AbstractKnowledgeSnapshotRepository):
             "groupId": snapshot.group_id,
             "version": snapshot.version,
             "createdAt": DatetimeMS(snapshot.created_at),
-            "sources": [source.__dict__ for source in snapshot.sources]
+            "sources": [
+                {
+                    "sourceId": source.source_id,
+                    "name": source.name,
+                    "location": source.location,
+                    "source_type": source.source_type
+                }
+                for source in snapshot.sources.values()
+            ]
         }
 
         await self.knowledge_snapshots.insert_one(snapshot_data)
@@ -53,13 +62,24 @@ class MongoKnowledgeSnapshotRepository(AbstractKnowledgeSnapshotRepository):
 
         if not doc:
             return None
-
-        return KnowledgeSnapshot(
+        
+        snapshot = KnowledgeSnapshot(
             group_id=doc["groupId"],
             version=doc["version"],
-            created_at=doc["createdAt"],
-            sources=doc["sources"]
+            created_at=doc["createdAt"]
         )
+
+        for source_doc in doc["sources"]:
+            snapshot.add_source(
+                KnowledgeSource(
+                    source_id=source_doc["sourceId"],
+                    name=source_doc["name"],
+                    location=source_doc["location"],
+                    source_type=source_doc["source_type"]
+                )
+            )
+
+        return snapshot
 
     async def list_snapshots_by_group(self, group_id: str) -> list[KnowledgeSnapshot]:
         """List all knowledge snapshots for a specific group"""
@@ -70,8 +90,7 @@ class MongoKnowledgeSnapshotRepository(AbstractKnowledgeSnapshotRepository):
             snapshot = KnowledgeSnapshot(
                 group_id=doc["groupId"],
                 version=doc["version"],
-                created_at=doc["createdAt"],
-                sources=doc["sources"]
+                created_at=doc["createdAt"]
             )
             snapshots.append(snapshot)
 
@@ -153,6 +172,8 @@ class PostgresKnowledgeVectorRepository(AbstractKnowledgeVectorRepository):
 
             return [
                 KnowledgeVectorResult(
+                    name=None,
+                    location=None,
                     content=row.content,
                     similarity_score=1.0 - float(row.distance),
                     created_at=row.created_at,

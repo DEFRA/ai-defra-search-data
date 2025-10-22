@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime
 
 from app.knowledge_management.models import KnowledgeSource
@@ -15,17 +15,20 @@ class KnowledgeVector:
     metadata: dict | None = None
 
 
-@dataclass(frozen=True)
+@dataclass
 class KnowledgeVectorResult:
     """Represents a knowledge search result with similarity scoring."""
 
     content: str
-    similarity_score: float  # 0.0 to 1.0, higher is more similar
+    similarity_score: float
     created_at: datetime
 
-    snapshot_id: str | None = None
-    source_id: str | None = None
+    snapshot_id: str
+    source_id: str
     metadata: dict | None = None
+
+    name: str | None = None
+    location: str | None = None
 
     @property
     def similarity_category(self) -> str:
@@ -46,7 +49,7 @@ class KnowledgeSnapshot:
     group_id: str
     version: int
     created_at: date
-    sources: set[KnowledgeSource]
+    sources: dict[str, KnowledgeSource] = field(default_factory=dict)
 
     @property
     def snapshot_id(self) -> str:
@@ -54,7 +57,7 @@ class KnowledgeSnapshot:
         return f"{self.group_id}_v{self.version}"
 
     def add_source(self, source: KnowledgeSource):
-        self.sources.add(source)
+        self.sources[source.source_id] = source
 
 
 class KnowledgeSnapshotNotFoundError(Exception):

@@ -137,7 +137,7 @@ async def list_group_snapshots(
             "group_id": snapshot.group_id,
             "version": snapshot.version,
             "created_at": snapshot.created_at.isoformat(),
-            "sources": [source.__dict__ for source in snapshot.sources]
+            "sources": [source.__dict__ for source in snapshot._sources]
         }
         for snapshot in snapshots
     ]

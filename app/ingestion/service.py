@@ -4,7 +4,7 @@ from logging import getLogger
 from fastapi import BackgroundTasks
 
 from app.common.bedrock import AbstractEmbeddingService
-from app.ingestion.models import IngestionVector, NoSourceDataError
+from app.ingestion.models import ChunkData, IngestionVector, NoSourceDataError
 from app.ingestion.repository import AbstractIngestionDataRepository
 from app.knowledge_management.models import KnowledgeGroup, KnowledgeSource
 from app.snapshot.service import SnapshotService
@@ -13,7 +13,7 @@ logger = getLogger(__name__)
 
 
 class IngestionService:
-    """Service class for processing individual knowledge sources."""
+    """Service class for processing knowledge sources."""
 
     def __init__(self,
                  ingestion_repository: AbstractIngestionDataRepository,
@@ -34,25 +34,51 @@ class IngestionService:
         Args:
             group: The knowledge group containing sources to process
         """
-        snapshot = await self.snapshot_service.create_snapshot(group.group_id, group.sources)
+        snapshot = await self.snapshot_service.create_snapshot(group.group_id, group.sources.values())
 
-        for source in group.sources:
+        for source in group.sources.values():
             self.background_tasks.add_task(self._process_source, source, snapshot.snapshot_id)
 
     async def _process_source(self, source: KnowledgeSource, snapshot_id: str) -> None:
         """
-        Process a single source: extract content, generate embeddings, store to S3 for audit,
-        and store vector for search. This is the main entry point for individual source processing.
+        Process a single source: process data, generate embeddings, and store vector for search.
+
+        Args:
+            source: The knowledge source to process
+            snapshot_id: The associated snapshot ID
         """
         logger.info("Processing source: %s for group: %s", source.name, snapshot_id)
 
-        vectors = []
+        vectors: IngestionVector = None
+
+        match source.source_type:
+            case "PRECHUNKED_BLOB":
+                vectors = await self._process_prechunked_source(source, snapshot_id)
+            case _:
+                raise NotImplementedError(f"Source type {source.source_type} ingestion not implemented")
+        
+        if vectors:
+            knowledge_vectors = [vector.to_knowledge_vector() for vector in vectors]
+            await self.snapshot_service.store_vectors(knowledge_vectors)
+        else:
+            logger.warning("No vectors generated for source: %s", source.source_id)
+
+        logger.info("Processing completed for source: %s", source.source_id)
+
+    async def _process_prechunked_source(self, source: KnowledgeSource, snapshot_id: str) -> list[IngestionVector]:
+        """
+        Process a source that has pre-chunked data available.
+        This method retrieves the chunked data, generates embeddings, and stores the vectors.
+        """
+        logger.info("Processing pre-chunked source: %s", source.source_id)
 
         chunk_files = self.ingestion_repository.list(source.source_id)
 
         if len(chunk_files) == 0:
             msg = f"No pre-chunked data found for source {source.source_id}"
             raise NoSourceDataError(msg)
+
+        vectors = []
 
         for chunk_file in chunk_files:
             file = self.ingestion_repository.get(chunk_file)
@@ -65,14 +91,7 @@ class IngestionService:
 
             vectors.extend(file_vectors)
 
-        print(f"Storing {len(vectors)} embedded chunks for source {source.source_id}")
-
-        if vectors:
-            # Convert IngestionVector to KnowledgeVector for the snapshot domain
-            knowledge_vectors = [vector.to_knowledge_vector() for vector in vectors]
-            await self.snapshot_service.store_vectors(knowledge_vectors)
-
-        logger.info("Processing completed for source: %s", source.source_id)
+        return vectors
 
     async def _process_chunked_data(self, file: bytes, snapshot_id: str, source_id: str) -> list[IngestionVector]:
         """
@@ -81,7 +100,10 @@ class IngestionService:
         """
         logger.info("Processing pre-chunked data from file")
 
-        chunks = [json.loads(line) for line in file.splitlines()]
+        chunks = [
+            ChunkData(**json.loads(line))
+            for line in file.splitlines()
+        ]
 
         logger.info("Generating embeddings for %d chunks", len(chunks))
 
@@ -89,14 +111,15 @@ class IngestionService:
 
         for chunk_no in range(len(chunks)):
             chunk = chunks[chunk_no]
-            embedding = self.embedding_service.generate_embeddings(chunk["text"])
+            embedding = self.embedding_service.generate_embeddings(chunk.text)
             vector = IngestionVector(
-                content=chunk["text"],
+                content=chunk.text,
                 embedding=embedding,
                 snapshot_id=snapshot_id,
                 source_id=source_id,
                 metadata=None
             )
+
             vectors.append(vector)
 
             if (chunk_no + 1) % 50 == 0:

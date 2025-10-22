@@ -41,11 +41,11 @@ async def get_snapshot(
         ) from err
 
     return {
-        "snapshot_id": snapshot.snapshot_id,
-        "group_id": snapshot.group_id,
+        "snapshotId": snapshot.snapshot_id,
+        "groupId": snapshot.group_id,
         "version": snapshot.version,
-        "created_at": snapshot.created_at.isoformat(),
-        "sources": [source.__dict__ for source in snapshot.sources]
+        "createdAt": snapshot.created_at.isoformat(),
+        "sources": [source for source in snapshot.sources.values()]
     }
 
 
@@ -75,8 +75,6 @@ async def query_snapshot(
 
         documents = await snp_service.search_similar(group, request.query, request.max_results)
 
-        print(documents)
-
         return [
             KnowledgeVectorResultResponse(
                 content=doc.content,
@@ -85,13 +83,14 @@ async def query_snapshot(
                 created_at=doc.created_at.isoformat(),
                 source_id=doc.source_id,
                 snapshot_id=doc.snapshot_id,
-                title=doc.metadata.get("title", "Untitled") if doc.metadata else "Untitled"
+                name=doc.name,
+                location=doc.location
             )
             for doc in documents
         ]
     except KnowledgeGroupNotFoundError as err:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Knowledge group with ID '{request.group_id}' not found"
         ) from err
     except NoActiveSnapshotError as err:

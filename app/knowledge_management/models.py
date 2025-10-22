@@ -68,7 +68,7 @@ class KnowledgeGroup:
         self.updated_at = updated_at
         self.active_snapshot = active_snapshot
 
-        self._sources = set()
+        self._sources = {}
 
     def __eq__(self, other):
         if not isinstance(other, KnowledgeGroup):
@@ -80,10 +80,10 @@ class KnowledgeGroup:
         return hash(self.group_id)
 
     def add_source(self, source: KnowledgeSource):
-        self._sources.add(source)
+        self._sources[source.source_id] = source
 
     @property
-    def sources(self) -> set[KnowledgeSource]:
+    def sources(self) -> dict[str, KnowledgeSource]:
         return self._sources
 
 
