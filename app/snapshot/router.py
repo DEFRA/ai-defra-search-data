@@ -45,7 +45,7 @@ async def get_snapshot(
         "groupId": snapshot.group_id,
         "version": snapshot.version,
         "createdAt": snapshot.created_at.isoformat(),
-        "sources": [source for source in snapshot.sources.values()]
+        "sources": list(snapshot.sources)
     }
 
 

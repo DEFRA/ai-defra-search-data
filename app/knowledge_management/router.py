@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 
@@ -67,8 +67,8 @@ async def create_group(group: CreateKnowledgeGroupRequest, service: KnowledgeMan
         name=group.name,
         description=group.description,
         owner=group.owner,
-        created_at=datetime.now(timezone.utc),
-        updated_at=datetime.now(timezone.utc)
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC)
     )
 
     for source in group.sources:

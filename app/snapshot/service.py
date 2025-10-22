@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from logging import getLogger
 
 from app.common.bedrock import AbstractEmbeddingService
@@ -50,7 +50,7 @@ class SnapshotService:
         snapshot = KnowledgeSnapshot(
             group_id=group_id,
             version=new_version,
-            created_at=datetime.now(tz=timezone.utc)
+            created_at=datetime.now(tz=UTC)
         )
 
         for source in sources:

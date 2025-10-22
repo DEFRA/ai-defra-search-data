@@ -55,8 +55,9 @@ class IngestionService:
             case "PRECHUNKED_BLOB":
                 vectors = await self._process_prechunked_source(source, snapshot_id)
             case _:
-                raise NotImplementedError(f"Source type {source.source_type} ingestion not implemented")
-        
+                msg = f"Source type {source.source_type} ingestion not implemented"
+                raise NotImplementedError(msg)
+
         if vectors:
             knowledge_vectors = [vector.to_knowledge_vector() for vector in vectors]
             await self.snapshot_service.store_vectors(knowledge_vectors)

@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
 
-from app.knowledge_management.models import KnowledgeSource
 from bson.datetime_ms import DatetimeMS
 from pymongo.asynchronous.database import AsyncCollection, AsyncDatabase
 from sqlalchemy import select
 
+from app.knowledge_management.models import KnowledgeSource
 from app.snapshot.models import (
     KnowledgeSnapshot,
     KnowledgeVector,
@@ -62,7 +62,7 @@ class MongoKnowledgeSnapshotRepository(AbstractKnowledgeSnapshotRepository):
 
         if not doc:
             return None
-        
+
         snapshot = KnowledgeSnapshot(
             group_id=doc["groupId"],
             version=doc["version"],
