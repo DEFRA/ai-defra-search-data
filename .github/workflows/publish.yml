@@ -34,15 +34,15 @@ jobs:
           uv run ruff check
 #          uv run pytest
 
+      - name: Build and Publish
+        uses: DEFRA/cdp-build-action/build@main
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Publish Database Schema
         uses: DEFRA/cdp-build-action/publish-db-migrations@main
         with:
           path: ./changelog
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and Publish
-        uses: DEFRA/cdp-build-action/build@main
-        with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
 #      - name: SonarCloud Scan
