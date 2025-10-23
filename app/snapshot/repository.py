@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+import abc
 
 import bson.datetime_ms
 import pymongo.asynchronous.database
@@ -8,20 +8,20 @@ from app.knowledge_management import models as km_models
 from app.snapshot import models
 
 
-class AbstractKnowledgeSnapshotRepository(ABC):
-    @abstractmethod
+class AbstractKnowledgeSnapshotRepository(abc.ABC):
+    @abc.abstractmethod
     async def save(self, snapshot) -> None:
         """Save a knowledge snapshot"""
 
-    @abstractmethod
+    @abc.abstractmethod
     async def get_by_id(self, snapshot_id: str):
         """Get a knowledge snapshot by its ID"""
 
-    @abstractmethod
+    @abc.abstractmethod
     async def list_snapshots_by_group(self, group_id: str) -> list[models.KnowledgeSnapshot]:
         """List all knowledge snapshots for a specific group"""
 
-    @abstractmethod
+    @abc.abstractmethod
     async def get_latest_by_group(self, group_id: str):
         """Get the latest knowledge snapshot for a specific group"""
 
@@ -110,12 +110,12 @@ class MongoKnowledgeSnapshotRepository(AbstractKnowledgeSnapshotRepository):
         )
 
 
-class AbstractKnowledgeVectorRepository(ABC):
-    @abstractmethod
+class AbstractKnowledgeVectorRepository(abc.ABC):
+    @abc.abstractmethod
     async def add(self, knowledge_vector: models.KnowledgeVector) -> None:
         """Add a knowledge vector entry"""
 
-    @abstractmethod
+    @abc.abstractmethod
     async def query_by_snapshot(self, embedding: list[float], snapshot_id: str, top_k: int) -> list[models.KnowledgeVectorResult]:
         """Query for the top_k most similar knowledge vectors within a specific snapshot"""
 

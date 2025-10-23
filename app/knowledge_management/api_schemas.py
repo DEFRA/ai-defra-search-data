@@ -1,13 +1,13 @@
 from pydantic import BaseModel, Field
 
-from app.knowledge_management.models import SourceType
+from app.knowledge_management import models
 
 
 class KnowledgeSource(BaseModel):
     """ Model for a knowledge source. """
 
     name: str = Field(..., description="The name of the knowledge source", min_length=1, max_length=255)
-    type: SourceType = Field(..., description="The type of the knowledge source")
+    type: models.SourceType = Field(..., description="The type of the knowledge source")
     location: str = Field(..., description="The URL of the knowledge source", min_length=1, max_length=2048)
 
 
