@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from app.snapshot import models
+
 
 @dataclass
 class IngestionVector:
@@ -13,8 +15,8 @@ class IngestionVector:
 
     def to_knowledge_vector(self):
         """Convert to KnowledgeVector for the snapshot domain."""
-        from app.snapshot.models import KnowledgeVector
-        return KnowledgeVector(
+
+        return models.KnowledgeVector(
             content=self.content,
             embedding=self.embedding,
             snapshot_id=self.snapshot_id,
