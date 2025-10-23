@@ -4,7 +4,8 @@ import logging
 import fastapi
 
 from app.common import bedrock
-from app.ingestion import models as ingestion_models, repository
+from app.ingestion import models as ingestion_models
+from app.ingestion import repository
 from app.knowledge_management import models as km_models
 from app.snapshot import service as snapshot_service
 
