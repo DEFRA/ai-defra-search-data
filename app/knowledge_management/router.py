@@ -7,6 +7,9 @@ from app.knowledge_management.api_schemas import (
     CreateKnowledgeGroupRequest,
     KnowledgeGroupResponse,
 )
+from app.knowledge_management.api_schemas import (
+    KnowledgeSource as KnowledgeSourceSchema,
+)
 from app.knowledge_management.dependencies import (
     get_ingestion_service,
     get_knowledge_management_service,
@@ -173,3 +176,41 @@ async def ingest_group(
     except KnowledgeGroupNotFoundError as err:
         raise HTTPException(status_code=404, detail=f"Knowledge group with ID '{group_id}' not found") from err
 
+
+@router.patch("/knowledge/groups/{group_id}/sources", response_model=KnowledgeGroupResponse)
+async def add_source(
+    group_id: str,
+    source_data: KnowledgeSourceSchema,
+    service: KnowledgeManagementService = Depends(get_knowledge_management_service)
+):
+    """
+    Add a source to a knowledge group.
+
+    Args:
+        group_id: The ID of the knowledge group
+        source: The knowledge source to add
+        service: Service dependency injection
+
+    Returns:
+        The updated knowledge group response data
+    """
+    try:
+        source = KnowledgeSource(
+            name=source_data.name,
+            source_type=source_data.type,
+            location=source_data.location
+        )
+
+        group = await service.add_source_to_group(group_id, source)
+
+        return KnowledgeGroupResponse(
+            group_id=group.group_id,
+            title=group.name,
+            description=group.description,
+            owner=group.owner,
+            created_at=group.created_at.isoformat(),
+            updated_at=group.updated_at.isoformat(),
+            sources=group.sources
+        )
+    except KnowledgeGroupNotFoundError as err:
+        raise HTTPException(status_code=404, detail=f"Knowledge group with ID '{group_id}' not found") from err

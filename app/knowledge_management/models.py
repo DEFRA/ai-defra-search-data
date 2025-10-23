@@ -1,7 +1,7 @@
 from datetime import date
 from enum import Enum
 
-from app.common.id_utils import generate_random_id
+from app.common import id_utils
 
 
 class SourceType(Enum):
@@ -21,7 +21,7 @@ class KnowledgeSource:
                  source_type: SourceType,
                  location: str,
                  source_id: str = None):
-        self.source_id = source_id or generate_random_id("ks")
+        self.source_id = source_id or id_utils.generate_random_id("ks")
         self.name = name
         self.source_type = source_type
         self.location = location
@@ -60,7 +60,7 @@ class KnowledgeGroup:
             msg = "KnowledgeGroup owner cannot be empty or whitespace."
             raise ValueError(msg)
 
-        self.group_id = group_id or generate_random_id("kg")
+        self.group_id = group_id or id_utils.generate_random_id("kg")
         self.name = name
         self.description = description
         self.owner = owner

@@ -1,19 +1,19 @@
-from logging import getLogger
+import logging
 
 import uvicorn
 
-from app.config import config
+from app import config
 
-logger = getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def main() -> None:
     uvicorn.run(
         "app.infra.fastapi_app:app",
-        host=config.host,
-        port=config.port,
-        log_config=config.log_config,
-        reload=config.python_env == "development"
+        host=config.config.host,
+        port=config.config.port,
+        log_config=config.config.log_config,
+        reload=config.config.python_env == "development"
     )
 
 

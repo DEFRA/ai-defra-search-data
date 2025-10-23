@@ -21,5 +21,5 @@ def __put_metric(metric_name, value, unit, metrics):
 def counter(metric_name, value):
     try:
         __put_metric(metric_name, value, "Count")
-    except Exception as e:
-        logger.error("Error calling put_metric: %s", e)
+    except Exception as err:
+        logger.error("Error calling put_metric: %s", err)
