@@ -1,10 +1,10 @@
-from dataclasses import dataclass, field
-from datetime import date, datetime
+import dataclasses
+import datetime
 
-from app.knowledge_management.models import KnowledgeSource
+from app.knowledge_management import models as km_models
 
 
-@dataclass
+@dataclasses.dataclass
 class KnowledgeVector:
     """Domain model for knowledge vectors."""
 
@@ -15,13 +15,13 @@ class KnowledgeVector:
     metadata: dict | None = None
 
 
-@dataclass
+@dataclasses.dataclass
 class KnowledgeVectorResult:
     """Represents a knowledge search result with similarity scoring."""
 
     content: str
     similarity_score: float
-    created_at: datetime
+    created_at: datetime.datetime
 
     snapshot_id: str
     source_id: str
@@ -42,21 +42,21 @@ class KnowledgeVectorResult:
         return "low"
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class KnowledgeSnapshot:
     """ Represents a snapshot of a knowledge group at a specific point in time. """
 
     group_id: str
     version: int
-    created_at: date
-    sources: dict[str, KnowledgeSource] = field(default_factory=dict)
+    created_at: datetime.date
+    sources: dict[str, km_models.KnowledgeSource] = dataclasses.field(default_factory=dict)
 
     @property
     def snapshot_id(self) -> str:
         """Generate snapshot ID from group_id and version."""
         return f"{self.group_id}_v{self.version}"
 
-    def add_source(self, source: KnowledgeSource):
+    def add_source(self, source: km_models.KnowledgeSource):
         self.sources[source.source_id] = source
 
 

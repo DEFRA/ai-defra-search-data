@@ -1,25 +1,25 @@
 import json
-from logging import getLogger
+import logging
 
-from fastapi import BackgroundTasks
+import fastapi
 
-from app.common.bedrock import AbstractEmbeddingService
-from app.ingestion.models import ChunkData, IngestionVector, NoSourceDataError
-from app.ingestion.repository import AbstractIngestionDataRepository
-from app.knowledge_management.models import KnowledgeGroup, KnowledgeSource
-from app.snapshot.service import SnapshotService
+from app.common import bedrock
+from app.ingestion import models as ingestion_models
+from app.ingestion import repository
+from app.knowledge_management import models as km_models
+from app.snapshot import service as snapshot_service
 
-logger = getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class IngestionService:
     """Service class for processing knowledge sources."""
 
     def __init__(self,
-                 ingestion_repository: AbstractIngestionDataRepository,
-                 embedding_service: AbstractEmbeddingService,
-                 snapshot_service: SnapshotService,
-                 background_tasks: BackgroundTasks
+                 ingestion_repository: repository.AbstractIngestionDataRepository,
+                 embedding_service: bedrock.AbstractEmbeddingService,
+                 snapshot_service: snapshot_service.SnapshotService,
+                 background_tasks: fastapi.BackgroundTasks
         ):
 
         self.ingestion_repository = ingestion_repository
@@ -27,7 +27,7 @@ class IngestionService:
         self.snapshot_service = snapshot_service
         self.background_tasks = background_tasks
 
-    async def process_group(self, group: KnowledgeGroup) -> None:
+    async def process_group(self, group: km_models.KnowledgeGroup) -> None:
         """
         Initiate background processing for all sources in a knowledge group.
 
@@ -39,7 +39,7 @@ class IngestionService:
         for source in group.sources.values():
             self.background_tasks.add_task(self._process_source, source, snapshot.snapshot_id)
 
-    async def _process_source(self, source: KnowledgeSource, snapshot_id: str) -> None:
+    async def _process_source(self, source: km_models.KnowledgeSource, snapshot_id: str) -> None:
         """
         Process a single source: process data, generate embeddings, and store vector for search.
 
@@ -49,7 +49,7 @@ class IngestionService:
         """
         logger.info("Processing source: %s for group: %s", source.name, snapshot_id)
 
-        vectors: IngestionVector = None
+        vectors: ingestion_models.IngestionVector = None
 
         match source.source_type:
             case "PRECHUNKED_BLOB":
@@ -66,7 +66,7 @@ class IngestionService:
 
         logger.info("Processing completed for source: %s", source.source_id)
 
-    async def _process_prechunked_source(self, source: KnowledgeSource, snapshot_id: str) -> list[IngestionVector]:
+    async def _process_prechunked_source(self, source: km_models.KnowledgeSource, snapshot_id: str) -> list[ingestion_models.IngestionVector]:
         """
         Process a source that has pre-chunked data available.
         This method retrieves the chunked data, generates embeddings, and stores the vectors.
@@ -77,7 +77,7 @@ class IngestionService:
 
         if len(chunk_files) == 0:
             msg = f"No pre-chunked data found for source {source.source_id}"
-            raise NoSourceDataError(msg)
+            raise ingestion_models.NoSourceDataError(msg)
 
         vectors = []
 
@@ -86,7 +86,7 @@ class IngestionService:
 
             if file is None:
                 msg = f"Failed to retrieve file {chunk_file} from repository for source {source.source_id}"
-                raise NoSourceDataError(msg)
+                raise ingestion_models.NoSourceDataError(msg)
 
             file_vectors = await self._process_chunked_data(file, snapshot_id, source.source_id)
 
@@ -94,7 +94,7 @@ class IngestionService:
 
         return vectors
 
-    async def _process_chunked_data(self, file: bytes, snapshot_id: str, source_id: str) -> list[IngestionVector]:
+    async def _process_chunked_data(self, file: bytes, snapshot_id: str, source_id: str) -> list[ingestion_models.IngestionVector]:
         """
         Process pre-chunked data from a file: read content, generate embeddings, and prepare vectors.
         Returns processed vectors ready for search storage.
@@ -102,7 +102,7 @@ class IngestionService:
         logger.info("Processing pre-chunked data from file")
 
         chunks = [
-            ChunkData(**json.loads(line))
+            ingestion_models.ChunkData(**json.loads(line))
             for line in file.splitlines()
         ]
 
@@ -113,7 +113,7 @@ class IngestionService:
         for chunk_no in range(len(chunks)):
             chunk = chunks[chunk_no]
             embedding = self.embedding_service.generate_embeddings(chunk.text)
-            vector = IngestionVector(
+            vector = ingestion_models.IngestionVector(
                 content=chunk.text,
                 embedding=embedding,
                 snapshot_id=snapshot_id,

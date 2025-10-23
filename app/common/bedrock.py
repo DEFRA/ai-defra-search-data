@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 
 import boto3
 
-from app.config import BedrockEmbeddingConfig, config
+from app import config
 
 bedrock_client: boto3.client = None
 
@@ -14,7 +14,7 @@ def get_bedrock_client():
     if bedrock_client is None:
         bedrock_client = boto3.client(
             "bedrock-runtime",
-            region_name=config.aws_region
+            region_name=config.config.aws_region
         )
 
     return bedrock_client
@@ -27,7 +27,7 @@ class AbstractEmbeddingService(ABC):
 
 
 class BedrockEmbeddingService(AbstractEmbeddingService):
-    def __init__(self, client: boto3.client, model_config: BedrockEmbeddingConfig):
+    def __init__(self, client: boto3.client, model_config: config.BedrockEmbeddingConfig):
         self.client = client
         self.model_config = model_config
 

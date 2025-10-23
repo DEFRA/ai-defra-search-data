@@ -1,39 +1,39 @@
-from pgvector.sqlalchemy import Vector
-from sqlalchemy import Column, DateTime, Integer, MetaData, String, Table, Text, func
-from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import DeclarativeBase, registry
+import pgvector.sqlalchemy
+import sqlalchemy
+import sqlalchemy.dialects.postgresql
+import sqlalchemy.orm
 
-import app.snapshot.models as model
+from app.snapshot import models
 
 
-class Base(DeclarativeBase):
+class Base(sqlalchemy.orm.DeclarativeBase):
     """SQLAlchemy declarative base."""
 
 
-metadata = MetaData()
-mapper_registry = registry(metadata=metadata)
+metadata = sqlalchemy.MetaData()
+mapper_registry = sqlalchemy.orm.registry(metadata=metadata)
 
-knowledge_vectors = Table(
+knowledge_vectors = sqlalchemy.Table(
     "knowledge_vectors",
     metadata,
-    Column("id", Integer, primary_key=True, nullable=False),
-    Column("content", Text, nullable=False),
-    Column("embedding", Vector(1024), nullable=False),
-    Column(
+    sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True, nullable=False),
+    sqlalchemy.Column("content", sqlalchemy.Text, nullable=False),
+    sqlalchemy.Column("embedding", pgvector.sqlalchemy.Vector(1024), nullable=False),
+    sqlalchemy.Column(
         "created_at",
-        DateTime(timezone=True),
+        sqlalchemy.DateTime(timezone=True),
         nullable=False,
-        server_default=func.current_timestamp()
+        server_default=sqlalchemy.func.current_timestamp()
     ),
-    Column("snapshot_id", String(50), nullable=True),
-    Column("source_id", String(50), nullable=True),
-    Column("metadata", JSONB, nullable=True),
+    sqlalchemy.Column("snapshot_id", sqlalchemy.String(50), nullable=True),
+    sqlalchemy.Column("source_id", sqlalchemy.String(50), nullable=True),
+    sqlalchemy.Column("metadata", sqlalchemy.dialects.postgresql.JSONB, nullable=True),
 )
 
 
 def start_mappers():
     mapper_registry.map_imperatively(
-        model.KnowledgeVector,
+        models.KnowledgeVector,
         knowledge_vectors,
         properties={
             "id": knowledge_vectors.c.id,

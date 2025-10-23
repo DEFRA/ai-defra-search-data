@@ -1,48 +1,44 @@
-from abc import ABC, abstractmethod
+import abc
 
-from bson.datetime_ms import DatetimeMS
-from pymongo.asynchronous.database import AsyncCollection, AsyncDatabase
-from sqlalchemy import select
+import bson.datetime_ms
+import pymongo.asynchronous.database
+import sqlalchemy
 
-from app.knowledge_management.models import KnowledgeSource
-from app.snapshot.models import (
-    KnowledgeSnapshot,
-    KnowledgeVector,
-    KnowledgeVectorResult,
-)
+from app.knowledge_management import models as km_models
+from app.snapshot import models
 
 
-class AbstractKnowledgeSnapshotRepository(ABC):
-    @abstractmethod
+class AbstractKnowledgeSnapshotRepository(abc.ABC):
+    @abc.abstractmethod
     async def save(self, snapshot) -> None:
         """Save a knowledge snapshot"""
 
-    @abstractmethod
+    @abc.abstractmethod
     async def get_by_id(self, snapshot_id: str):
         """Get a knowledge snapshot by its ID"""
 
-    @abstractmethod
-    async def list_snapshots_by_group(self, group_id: str) -> list[KnowledgeSnapshot]:
+    @abc.abstractmethod
+    async def list_snapshots_by_group(self, group_id: str) -> list[models.KnowledgeSnapshot]:
         """List all knowledge snapshots for a specific group"""
 
-    @abstractmethod
+    @abc.abstractmethod
     async def get_latest_by_group(self, group_id: str):
         """Get the latest knowledge snapshot for a specific group"""
 
 
 class MongoKnowledgeSnapshotRepository(AbstractKnowledgeSnapshotRepository):
-    def __init__(self, db: AsyncDatabase):
-        self.db: AsyncDatabase = db
-        self.knowledge_snapshots: AsyncCollection = self.db.get_collection("knowledgeSnapshots")
+    def __init__(self, db: pymongo.asynchronous.database.AsyncDatabase):
+        self.db: pymongo.asynchronous.database.AsyncDatabase = db
+        self.knowledge_snapshots: pymongo.asynchronous.database.AsyncCollection = self.db.get_collection("knowledgeSnapshots")
 
-    async def save(self, snapshot: KnowledgeSnapshot) -> None:
+    async def save(self, snapshot: models.KnowledgeSnapshot) -> None:
         """Save a knowledge snapshot"""
 
         snapshot_data = {
             "snapshotId": snapshot.snapshot_id,
             "groupId": snapshot.group_id,
             "version": snapshot.version,
-            "createdAt": DatetimeMS(snapshot.created_at),
+            "createdAt": bson.datetime_ms.DatetimeMS(snapshot.created_at),
             "sources": [
                 {
                     "sourceId": source.source_id,
@@ -56,14 +52,14 @@ class MongoKnowledgeSnapshotRepository(AbstractKnowledgeSnapshotRepository):
 
         await self.knowledge_snapshots.insert_one(snapshot_data)
 
-    async def get_by_id(self, snapshot_id: str) -> KnowledgeSnapshot | None:
+    async def get_by_id(self, snapshot_id: str) -> models.KnowledgeSnapshot | None:
         """Get a knowledge snapshot by its ID"""
         doc = await self.knowledge_snapshots.find_one({"snapshotId": snapshot_id})
 
         if not doc:
             return None
 
-        snapshot = KnowledgeSnapshot(
+        snapshot = models.KnowledgeSnapshot(
             group_id=doc["groupId"],
             version=doc["version"],
             created_at=doc["createdAt"]
@@ -71,7 +67,7 @@ class MongoKnowledgeSnapshotRepository(AbstractKnowledgeSnapshotRepository):
 
         for source_doc in doc["sources"]:
             snapshot.add_source(
-                KnowledgeSource(
+                km_models.KnowledgeSource(
                     source_id=source_doc["sourceId"],
                     name=source_doc["name"],
                     location=source_doc["location"],
@@ -81,13 +77,13 @@ class MongoKnowledgeSnapshotRepository(AbstractKnowledgeSnapshotRepository):
 
         return snapshot
 
-    async def list_snapshots_by_group(self, group_id: str) -> list[KnowledgeSnapshot]:
+    async def list_snapshots_by_group(self, group_id: str) -> list[models.KnowledgeSnapshot]:
         """List all knowledge snapshots for a specific group"""
         cursor = self.knowledge_snapshots.find({"groupId": group_id})
         snapshots = []
 
         async for doc in cursor:
-            snapshot = KnowledgeSnapshot(
+            snapshot = models.KnowledgeSnapshot(
                 group_id=doc["groupId"],
                 version=doc["version"],
                 created_at=doc["createdAt"]
@@ -96,7 +92,7 @@ class MongoKnowledgeSnapshotRepository(AbstractKnowledgeSnapshotRepository):
 
         return snapshots
 
-    async def get_latest_by_group(self, group_id: str) -> KnowledgeSnapshot | None:
+    async def get_latest_by_group(self, group_id: str) -> models.KnowledgeSnapshot | None:
         """Get the latest knowledge snapshot for a specific group"""
         doc = await self.knowledge_snapshots.find_one(
             {"groupId": group_id},
@@ -106,7 +102,7 @@ class MongoKnowledgeSnapshotRepository(AbstractKnowledgeSnapshotRepository):
         if not doc:
             return None
 
-        return KnowledgeSnapshot(
+        return models.KnowledgeSnapshot(
             group_id=doc["groupId"],
             version=doc["version"],
             created_at=doc["createdAt"],
@@ -114,13 +110,13 @@ class MongoKnowledgeSnapshotRepository(AbstractKnowledgeSnapshotRepository):
         )
 
 
-class AbstractKnowledgeVectorRepository(ABC):
-    @abstractmethod
-    async def add(self, knowledge_vector: KnowledgeVector) -> None:
+class AbstractKnowledgeVectorRepository(abc.ABC):
+    @abc.abstractmethod
+    async def add(self, knowledge_vector: models.KnowledgeVector) -> None:
         """Add a knowledge vector entry"""
 
-    @abstractmethod
-    async def query_by_snapshot(self, embedding: list[float], snapshot_id: str, top_k: int) -> list[KnowledgeVectorResult]:
+    @abc.abstractmethod
+    async def query_by_snapshot(self, embedding: list[float], snapshot_id: str, top_k: int) -> list[models.KnowledgeVectorResult]:
         """Query for the top_k most similar knowledge vectors within a specific snapshot"""
 
 
@@ -136,34 +132,34 @@ class PostgresKnowledgeVectorRepository(AbstractKnowledgeVectorRepository):
         """
         self.session_factory = session_factory
 
-    async def add(self, knowledge_vector: KnowledgeVector) -> None:
+    async def add(self, knowledge_vector: models.KnowledgeVector) -> None:
         """Add a knowledge vector entry to PostgreSQL."""
         async with self.session_factory() as session:
             session.add(knowledge_vector)
             await session.commit()
 
-    async def add_batch(self, vectors: list[KnowledgeVector]) -> None:
+    async def add_batch(self, vectors: list[models.KnowledgeVector]) -> None:
         """Add multiple knowledge vector entries to PostgreSQL in batch."""
         async with self.session_factory() as session:
             session.add_all(vectors)
             await session.commit()
 
-    async def query_by_snapshot(self, embedding: list[float], snapshot_id: str, max_results: int) -> list[KnowledgeVectorResult]:
+    async def query_by_snapshot(self, embedding: list[float], snapshot_id: str, max_results: int) -> list[models.KnowledgeVectorResult]:
         """Query for the top_k most similar knowledge vectors within a specific snapshot."""
         async with self.session_factory() as session:
             query = (
-                select(
-                    KnowledgeVector.id,
-                    KnowledgeVector.content,
-                    KnowledgeVector.embedding,
-                    KnowledgeVector.created_at,
-                    KnowledgeVector.snapshot_id,
-                    KnowledgeVector.source_id,
-                    KnowledgeVector.metadata,
-                    KnowledgeVector.embedding.cosine_distance(embedding).label("distance")
+                sqlalchemy.select(
+                    models.KnowledgeVector.id,
+                    models.KnowledgeVector.content,
+                    models.KnowledgeVector.embedding,
+                    models.KnowledgeVector.created_at,
+                    models.KnowledgeVector.snapshot_id,
+                    models.KnowledgeVector.source_id,
+                    models.KnowledgeVector.metadata,
+                    models.KnowledgeVector.embedding.cosine_distance(embedding).label("distance")
                 )
-                .where(KnowledgeVector.snapshot_id == snapshot_id)
-                .order_by(KnowledgeVector.embedding.cosine_distance(embedding))
+                .where(models.KnowledgeVector.snapshot_id == snapshot_id)
+                .order_by(models.KnowledgeVector.embedding.cosine_distance(embedding))
                 .limit(max_results)
             )
 
@@ -171,7 +167,7 @@ class PostgresKnowledgeVectorRepository(AbstractKnowledgeVectorRepository):
             rows = result.fetchall()
 
             return [
-                KnowledgeVectorResult(
+                models.KnowledgeVectorResult(
                     name=None,
                     location=None,
                     content=row.content,

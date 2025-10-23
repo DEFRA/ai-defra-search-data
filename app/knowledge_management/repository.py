@@ -1,46 +1,46 @@
-from abc import ABC, abstractmethod
+import abc
 
-from bson.datetime_ms import DatetimeMS
-from bson.objectid import ObjectId
-from pymongo.asynchronous.database import AsyncCollection, AsyncDatabase
-from pymongo.errors import DuplicateKeyError
+import pymongo.asynchronous.collection
+import pymongo.asynchronous.database
+import pymongo.errors
 
-from app.knowledge_management.models import (
-    KnowledgeGroup,
-    KnowledgeGroupAlreadyExistsError,
-    KnowledgeSource,
-)
+from app.common import mongo
+from app.knowledge_management import models
 
 
-class AbstractKnowledgeGroupRepository(ABC):
-    @abstractmethod
-    async def save(self, group: KnowledgeGroup) -> None:
-        """Save a knowledge group with all its sources"""
+class AbstractKnowledgeGroupRepository(abc.ABC):
+    @abc.abstractmethod
+    async def save(self, group: models.KnowledgeGroup) -> None:
+        """Save knowledge group metadata only (sources managed separately)"""
 
-    @abstractmethod
-    async def get_by_id(self, group_id: str) -> KnowledgeGroup | None:
+    @abc.abstractmethod
+    async def get_by_id(self, group_id: str) -> models.KnowledgeGroup | None:
         """Get a complete knowledge group with all its sources loaded"""
 
-    @abstractmethod
-    async def list_all(self) -> list[KnowledgeGroup]:
+    @abc.abstractmethod
+    async def list_all(self) -> list[models.KnowledgeGroup]:
         """List all knowledge groups with their sources loaded"""
+
+    @abc.abstractmethod
+    async def add_sources_to_group(self, group_id: str, sources: list[models.KnowledgeSource]) -> None:
+        """Add multiple sources to an existing knowledge group (bulk insert)"""
 
 
 class MongoKnowledgeGroupRepository(AbstractKnowledgeGroupRepository):
-    def __init__(self, db: AsyncDatabase):
-        self.db: AsyncDatabase = db
-        self.knowledge_groups: AsyncCollection = self.db.get_collection("knowledgeGroups")
-        self.knowledge_sources: AsyncCollection = self.db.get_collection("knowledgeSources")
+    def __init__(self, db: pymongo.asynchronous.database.AsyncDatabase):
+        self.db: pymongo.asynchronous.database.AsyncDatabase = db
+        self.knowledge_groups: pymongo.asynchronous.collection.AsyncCollection = self.db.get_collection("knowledgeGroups")
+        self.knowledge_sources: pymongo.asynchronous.collection.AsyncCollection = self.db.get_collection("knowledgeSources")
 
-    async def save(self, group: KnowledgeGroup) -> None:
-        """Save a knowledge group with all its sources"""
+    async def save(self, group: models.KnowledgeGroup) -> None:
+        """Save knowledge group metadata only (sources managed separately)"""
         group_data = {
             "groupId": group.group_id,
             "title": group.name,
             "description": group.description,
             "owner": group.owner,
-            "createdAt": DatetimeMS(group.created_at),
-            "updatedAt": DatetimeMS(group.updated_at),
+            "createdAt": mongo.DatetimeMS(group.created_at),
+            "updatedAt": mongo.DatetimeMS(group.updated_at),
             "activeSnapshot": group.active_snapshot
         }
 
@@ -51,9 +51,9 @@ class MongoKnowledgeGroupRepository(AbstractKnowledgeGroupRepository):
                 {"$set": group_data},
                 upsert=True
             )
-        except DuplicateKeyError:
+        except pymongo.errors.DuplicateKeyError:
             msg = f"Knowledge entry with group_id '{group.group_id}' already exists"
-            raise KnowledgeGroupAlreadyExistsError(msg) from None
+            raise models.KnowledgeGroupAlreadyExistsError(msg) from None
 
         group_doc = await self.knowledge_groups.find_one({"groupId": group.group_id})
 
@@ -61,22 +61,7 @@ class MongoKnowledgeGroupRepository(AbstractKnowledgeGroupRepository):
             msg = f"Failed to save knowledge group '{group.group_id}'"
             raise RuntimeError(msg)
 
-        if group.sources:
-            source_documents = []
-            for source in group.sources.values():
-                source_data = {
-                    "_id": ObjectId(),
-                    "groupId": group.group_id,
-                    "sourceId": source.source_id,
-                    "name": source.name,
-                    "sourceType": str(source.source_type),
-                    "location": source.location
-                }
-                source_documents.append(source_data)
-
-            await self.knowledge_sources.insert_many(source_documents)
-
-    async def get_by_id(self, group_id: str) -> KnowledgeGroup | None:
+    async def get_by_id(self, group_id: str) -> models.KnowledgeGroup | None:
         """Get a complete knowledge group with all its sources loaded"""
 
         group_doc = await self.knowledge_groups.find_one({"groupId": group_id})
@@ -85,7 +70,7 @@ class MongoKnowledgeGroupRepository(AbstractKnowledgeGroupRepository):
             return None
 
         # Create group instance
-        group = KnowledgeGroup(
+        group = models.KnowledgeGroup(
             group_id=group_doc["groupId"],
             name=group_doc["title"],
             description=group_doc["description"],
@@ -98,7 +83,7 @@ class MongoKnowledgeGroupRepository(AbstractKnowledgeGroupRepository):
         cursor = self.knowledge_sources.find({"groupId": group_id})
 
         async for source_doc in cursor:
-            source = KnowledgeSource(
+            source = models.KnowledgeSource(
                 name=source_doc["name"],
                 source_type=source_doc["sourceType"],
                 location=source_doc["location"],
@@ -108,13 +93,13 @@ class MongoKnowledgeGroupRepository(AbstractKnowledgeGroupRepository):
 
         return group
 
-    async def list_all(self) -> list[KnowledgeGroup]:
+    async def list_all(self) -> list[models.KnowledgeGroup]:
         """List all knowledge groups with their sources loaded"""
         cursor = self.knowledge_groups.find()
         groups = []
 
         async for group_doc in cursor:
-            group = KnowledgeGroup(
+            group = models.KnowledgeGroup(
                 group_id=group_doc["groupId"],
                 name=group_doc["title"],
                 description=group_doc["description"],
@@ -127,7 +112,7 @@ class MongoKnowledgeGroupRepository(AbstractKnowledgeGroupRepository):
             source_cursor = self.knowledge_sources.find({"groupId": group.group_id})
 
             async for source_doc in source_cursor:
-                source = KnowledgeSource(
+                source = models.KnowledgeSource(
                     name=source_doc["name"],
                     source_type=source_doc["sourceType"],
                     location=source_doc["location"],
@@ -139,3 +124,21 @@ class MongoKnowledgeGroupRepository(AbstractKnowledgeGroupRepository):
             groups.append(group)
 
         return groups
+
+    async def add_sources_to_group(self, group_id: str, sources: list[models.KnowledgeSource]) -> None:
+        """Add multiple sources to an existing knowledge group (bulk insert)"""
+        if not sources:
+            return
+
+        source_documents = []
+        for source in sources:
+            source_data = {
+                "groupId": group_id,
+                "sourceId": source.source_id,
+                "name": source.name,
+                "sourceType": str(source.source_type),
+                "location": source.location
+            }
+            source_documents.append(source_data)
+
+        await self.knowledge_sources.insert_many(source_documents)
