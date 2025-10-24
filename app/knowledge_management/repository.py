@@ -6,7 +6,6 @@ import pymongo.asynchronous.collection
 import pymongo.asynchronous.database
 import pymongo.errors
 
-from app.common import mongo
 from app.knowledge_management import models
 
 
