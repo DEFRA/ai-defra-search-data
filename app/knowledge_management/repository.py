@@ -1,10 +1,11 @@
 import abc
 
+import bson.datetime_ms
+import pymongo
 import pymongo.asynchronous.collection
 import pymongo.asynchronous.database
 import pymongo.errors
 
-from app.common import mongo
 from app.knowledge_management import models
 
 
@@ -39,8 +40,8 @@ class MongoKnowledgeGroupRepository(AbstractKnowledgeGroupRepository):
             "title": group.name,
             "description": group.description,
             "owner": group.owner,
-            "createdAt": mongo.DatetimeMS(group.created_at),
-            "updatedAt": mongo.DatetimeMS(group.updated_at),
+            "createdAt": bson.datetime_ms.DatetimeMS(group.created_at),
+            "updatedAt": bson.datetime_ms.DatetimeMS(group.updated_at),
             "activeSnapshot": group.active_snapshot
         }
 
