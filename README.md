@@ -3,10 +3,10 @@
 A agentic workflow that demonstrates client-side Model Context Protocol (MCP) usage within a FastAPI application.
 
 ## Prequisites
-- [Python](https://docs.python.org/3/using/index.html) `>= 3.12` - We recommend using [uv](https://docs.astral.sh/uv/getting-started/installation/) to manage your Python environment.
+- [Python](https://docs.python.org/3/using/index.html) `>= 3.13` - We recommend using [uv](https://docs.astral.sh/uv/getting-started/installation/) to manage your Python environment.
 - [pipx](https://pipxproject.github.io/pipx/installation/)
 - [uv](https://docs.astral.sh/uv/getting-started/installation/) 
-- [Docker and Docker Compose](https://docs.docker.com/get-docker/) - Optional if using startup script.
+- [Docker and Docker Compose](https://docs.docker.com/get-docker/)
 - [MCP Inspector](https://github.com/modelcontextprotocol/inspector) - Optional, but recommended for developing against MCP server.
 
 ## Requirements
@@ -65,8 +65,6 @@ Follow the convention below for environment variables and secrets in local devel
 
 **Libraries:** Ensure the python virtual environment is configured and libraries are installed using `uv sync`, [as above](#python)
 
-**Pre-Commit Hooks:** Ensure you install the pre-commit hooks, as above
-
 ### Development
 
 This app can be run locally by either using the Docker Compose project or via the provided script `scripts/start_dev_server.sh`.
@@ -81,24 +79,27 @@ docker compose --profile service up --build
 
 If you want to enable hot-reloading, you can press the `w` key once the compose project is running to enable `watch` mode.
 
-#### Using the provided script
+#### Debugging
 
-To run the application using the provided script, you can execute:
+This project is also configured for debugging with `debugpy`. You should follow the instructions below (for your IDE) to set up the debugging environment.
 
+**Visual Studio Code**
+
+1. Install the [Python](https://marketplace.visualstudio.com/items?itemName=ms-python.python) and [Python Debugger](https://marketplace.visualstudio.com/items?itemName=ms-python.debugpy) extensions for Visual Studio Code.
+2. Open the command palette (Ctrl+Shift+P) and select "Debug: Add Configuration".
+3. In the dropdown, select "Python Debugger" -> "Python: Remote Attach".
+4. Enter the following configuration:
+* host => localhost
+* port => 5678
+* localRoot => ${workspaceFolder}
+* remoteRoot => /home/nonroot
+
+You can now start the service in debug mode by running the following command:
 ```bash
-./scripts/start_dev_server.sh
+docker compose --profile -f compose.yml -f compose.debug.yml up --build
 ```
 
-This script will:
-
-- Check if Docker is running
-- Start dependent services with Docker Compose (Localstack, MongoDB)
-- Set up environment variables for local development
-- Load configuration from compose/aws.env and compose/secrets.env
-- Verify the Python virtual environment is set up
-- Start the FastAPI application with hot-reload enabled
-
-The service will then run on `http://localhost:8085`
+You should now be able to attach the debugger to the running service.
 
 ### Testing
 
