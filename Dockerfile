@@ -3,7 +3,7 @@ ARG PARENT_VERSION=latest-3.13
 ARG PORT=8085
 ARG PORT_DEBUG=8086
 
-FROM defra-python-development AS development
+FROM defradigital/python-development:${PARENT_VERSION} AS production
 
 ENV PATH="/home/nonroot/.venv/bin:${PATH}"
 ENV LOG_CONFIG="logging-dev.json"
@@ -27,7 +27,7 @@ EXPOSE ${PORT} ${PORT_DEBUG}
 
 CMD [ "/home/nonroot/.venv/bin/ai-defra-search-data" ]
 
-FROM defra-python AS production
+FROM defradigital/python:${PARENT_VERSION} AS production
 
 ENV PATH="/home/nonroot/.venv/bin:${PATH}"
 ENV LOG_CONFIG="logging.json"
