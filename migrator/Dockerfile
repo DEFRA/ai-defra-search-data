@@ -1,24 +1,25 @@
 # Builder Stage
-FROM eclipse-temurin:17-jre-alpine-3.21
+FROM eclipse-temurin:17-jre
 
 ARG LIQUIBASE_VERSION=4.28.0
 ARG LB_SHA256=97dd07eaca0406a09e1ae19b407eea42a7e944c7f4571922bffce71b43b75ce8
 
 # Create setup user
-RUN addgroup -g 1000 setup && \
-    adduser -D -u 1000 -G setup -s /bin/sh setup && \
-    chown setup:setup /home/setup
+RUN groupadd -g 1000 setup || true && \
+    useradd -u 1000 -g 1000 -s /bin/bash -m setup || true
 
 # Create directory for Liquibase
-RUN mkdir /liquibase && chown setup /liquibase
+RUN mkdir /liquibase && chown 1000:1000 /liquibase
 
 # Install PostgreSQL client
-RUN apk update && \
-    apk add --no-cache \
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
     bash \
+    ca-certificates \
     curl \
     postgresql-client \
-    wget
+    wget && \
+    rm -rf /var/lib/apt/lists/*
 
 # Download and install Liquibase
 WORKDIR /liquibase
@@ -39,7 +40,7 @@ COPY ./run-setup.sh /run-setup.sh
 RUN chmod +x /run-setup.sh
 
 # Set user and group
-USER setup:setup
+USER 1000:1000
 
 WORKDIR /
 
