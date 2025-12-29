@@ -150,6 +150,14 @@ The service is built around two main domain concepts:
 * Knowledge Groups - A collection of related data sources that can be ingested and queried together.
 * Knowledge Snapshots - An immutable snapshot of ingested data from a Knowledge Group at a specific point in time.
 
+### API Documentation
+
+Automated API documentation via FastAPI and Swagger UI is available at:
+
+```
+http://localhost:8085/docs
+```
+
 ### Knowledge Group
 
 A Knowledge Group represents a collection of related data sources that can be ingested and queried together. Each Knowledge Group has a unique identifier and contains metadata about the data sources it encompasses.
@@ -208,7 +216,6 @@ sequenceDiagram
     participant MongoDB
     
     Client->>+Service: POST /knowledge/groups
-    Note right of Client: Request includes:<br/>- name<br/>- description<br/>- owner<br/>- sources[]
     
     Service->>Service: Generate group_id (kg_{random})
     Service->>Service: Generate source_id for each source (ks_{random})
@@ -220,7 +227,6 @@ sequenceDiagram
     MongoDB-->>-Service: Sources saved
     
     Service-->>-Client: 201 CREATED (Knowledge Group created)
-    Note left of Service: Response includes:<br/>- group_id<br/>- metadata
 ```
 
 #### Adding Sources
@@ -236,7 +242,6 @@ sequenceDiagram
     participant MongoDB
     
     Client->>+Service: PATCH /knowledge/groups/{group_id}/sources
-    Note right of Client: Request includes:<br/>- name<br/>- type<br/>- location
     
     Service->>+MongoDB: Get Knowledge Group by group_id
     MongoDB-->>-Service: Knowledge Group
@@ -248,7 +253,6 @@ sequenceDiagram
     MongoDB-->>-Service: Source added
     
     Service-->>-Client: 200 OK (Updated Knowledge Group)
-    Note left of Service: Response includes:<br/>- updated sources list
 ```
 
 ### Knowledge Snapshots
