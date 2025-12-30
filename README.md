@@ -65,6 +65,18 @@ Follow the convention below for environment variables and secrets in local devel
 
 **Libraries:** Ensure the python virtual environment is configured and libraries are installed using `uv sync`, [as above](#python)
 
+The following environment variables can be configured for the application:
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `AWS_REGION` | Yes | `eu-central-1` | The AWS region to use for AWS services |
+| `AWS_DEFAULT_REGION` | Yes | `eu-central-1` | The default AWS region (should match AWS_REGION) |
+| `AWS_ACCESS_KEY_ID` | Yes | `test` | AWS access key ID (use `test` for local development with Localstack) |
+| `AWS_SECRET_ACCESS_KEY` | Yes | `test` | AWS secret access key (use `test` for local development with Localstack) |
+| `AWS_BEARER_TOKEN_BEDROCK` | Yes | N/A | Bearer token for AWS Bedrock authentication |
+| `BEDROCK_EMBEDDING_MODEL_ID` | Yes | `amazon.titan-embed-text-v2:0` | The AWS Bedrock model ID to use for generating embeddings |
+| `INGESTION_DATA_BUCKET_NAME` | Yes | `ai-defra-search-ingestion-data` | S3 bucket name containing data for ingestion |
+
 ### Development
 
 This app can be run locally by either using the Docker Compose project or via the provided script `scripts/start_dev_server.sh`.

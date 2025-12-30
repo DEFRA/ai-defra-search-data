@@ -1,5 +1,5 @@
 # Builder Stage
-FROM eclipse-temurin:17-jre-alpine-3.21
+FROM eclipse-temurin:21-jre-alpine-3.23
 
 ARG LIQUIBASE_VERSION=4.28.0
 ARG LB_SHA256=97dd07eaca0406a09e1ae19b407eea42a7e944c7f4571922bffce71b43b75ce8
