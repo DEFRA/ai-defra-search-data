@@ -113,12 +113,19 @@ class IngestionService:
         for chunk_no in range(len(chunks)):
             chunk = chunks[chunk_no]
             embedding = self.embedding_service.generate_embeddings(chunk.text)
+
+            metadata = {}
+            if chunk.chunk_id is not None:
+                metadata["chunk_id"] = chunk.chunk_id
+            if chunk.source:
+                metadata["original_source"] = chunk.source
+
             vector = ingestion_models.IngestionVector(
                 content=chunk.text,
                 embedding=embedding,
                 snapshot_id=snapshot_id,
                 source_id=source_id,
-                metadata=None
+                metadata=metadata or None
             )
 
             vectors.append(vector)

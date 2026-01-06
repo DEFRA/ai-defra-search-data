@@ -28,6 +28,7 @@ class IngestionVector:
 class ChunkData:
     source: str
     text: str
+    chunk_id: int | None = None
 
 
 class NoSourceDataError(Exception):

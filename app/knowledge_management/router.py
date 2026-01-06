@@ -59,8 +59,9 @@ async def create_group(group: api_schemas.CreateKnowledgeGroupRequest, service: 
         updated_at=datetime.datetime.now(datetime.UTC)
     )
 
-    for source in group.sources:
-        knowledge_group.add_source(models.KnowledgeSource(name=source.name, source_type=source.type, location=source.location))
+    if group.sources:
+        for source in group.sources:
+            knowledge_group.add_source(models.KnowledgeSource(name=source.name, source_type=source.type, location=source.location))
 
     await service.create_knowledge_group(knowledge_group)
 
@@ -70,7 +71,15 @@ async def create_group(group: api_schemas.CreateKnowledgeGroupRequest, service: 
         description=knowledge_group.description,
         owner=knowledge_group.owner,
         created_at=knowledge_group.created_at.isoformat(),
-        updated_at=knowledge_group.updated_at.isoformat()
+        updated_at=knowledge_group.updated_at.isoformat(),
+        sources=[
+            api_schemas.KnowledgeSourceResponse(
+                source_id=source.source_id,
+                name=source.name,
+                type=str(source.source_type),
+                location=source.location
+            ) for source in knowledge_group.sources.values()
+        ]
     )
 
 
@@ -96,7 +105,14 @@ async def get_group(group_id: str, service: km_service.KnowledgeManagementServic
             owner=group.owner,
             created_at=group.created_at.isoformat(),
             updated_at=group.updated_at.isoformat(),
-            sources=group.sources
+            sources=[
+                api_schemas.KnowledgeSourceResponse(
+                    source_id=source.source_id,
+                    name=source.name,
+                    type=str(source.source_type),
+                    location=source.location
+                ) for source in group.sources.values()
+            ]
         )
     except models.KnowledgeGroupNotFoundError as err:
         raise fastapi.HTTPException(status_code=404, detail=f"Knowledge group with ID '{group_id}' not found") from err
@@ -125,7 +141,7 @@ async def list_group_snapshots(
             "group_id": snapshot.group_id,
             "version": snapshot.version,
             "created_at": snapshot.created_at.isoformat(),
-            "sources": [source.__dict__ for source in snapshot._sources]
+            "sources": [source.__dict__ for source in snapshot.sources.values()]
         }
         for snapshot in snapshots
     ]
@@ -195,7 +211,14 @@ async def add_source(
             owner=group.owner,
             created_at=group.created_at.isoformat(),
             updated_at=group.updated_at.isoformat(),
-            sources=group.sources
+            sources=[
+                api_schemas.KnowledgeSourceResponse(
+                    source_id=source.source_id,
+                    name=source.name,
+                    type=str(source.source_type),
+                    location=source.location
+                ) for source in group.sources.values()
+            ]
         )
     except models.KnowledgeGroupNotFoundError as err:
         raise fastapi.HTTPException(status_code=404, detail=f"Knowledge group with ID '{group_id}' not found") from err

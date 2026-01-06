@@ -11,6 +11,14 @@ class KnowledgeSource(BaseModel):
     location: str = Field(..., description="The URL of the knowledge source", min_length=1, max_length=2048)
 
 
+class KnowledgeSourceResponse(BaseModel):
+    """ Response model for a knowledge source. """
+    source_id: str = Field(..., description="The unique identifier of the knowledge source", serialization_alias="sourceId")
+    name: str = Field(..., description="The name of the knowledge source")
+    type: str = Field(..., description="The type of the knowledge source")
+    location: str = Field(..., description="The URL of the knowledge source")
+
+
 class CreateKnowledgeGroupRequest(BaseModel):
     """ Request model for creating a knowledge group. """
 
@@ -29,3 +37,4 @@ class KnowledgeGroupResponse(BaseModel):
     owner: str = Field(..., description="The owner of the knowledge group")
     created_at: str = Field(..., description="The creation date of the knowledge group in ISO format", serialization_alias="createdAt")
     updated_at: str = Field(..., description="The last update date of the knowledge group in ISO format", serialization_alias="updatedAt")
+    sources: list[KnowledgeSourceResponse] = Field(default=[], description="List of knowledge group sources")
