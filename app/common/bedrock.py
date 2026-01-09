@@ -10,23 +10,12 @@ bedrock_client: boto3.client = None
 
 def get_bedrock_client(app_config: config.AppConfig | None = None):
     global bedrock_client
-    
-    if app_config is None:
-        app_config = config.config
 
     if bedrock_client is None:
-        if app_config.bedrock_embedding_config.use_credentials:
-            bedrock_client = boto3.client(
-                "bedrock-runtime",
-                aws_access_key_id=app_config.bedrock_embedding_config.access_key_id,
-                aws_secret_access_key=app_config.bedrock_embedding_config.secret_access_key,
-                region_name=app_config.aws_region
-            )
-        else:
-            bedrock_client = boto3.client(
-                "bedrock-runtime",
-                region_name=app_config.aws_region
-            )
+        bedrock_client = boto3.client(
+            "bedrock-runtime",
+            region_name=app_config.aws_region
+        )
 
     return bedrock_client
 
