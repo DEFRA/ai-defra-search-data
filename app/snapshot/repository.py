@@ -44,7 +44,7 @@ class MongoKnowledgeSnapshotRepository(AbstractKnowledgeSnapshotRepository):
                     "sourceId": source.source_id,
                     "name": source.name,
                     "location": source.location,
-                    "sourceType": source.source_type
+                    "sourceType": str(source.source_type)
                 }
                 for source in snapshot.sources.values()
             ]
@@ -71,7 +71,7 @@ class MongoKnowledgeSnapshotRepository(AbstractKnowledgeSnapshotRepository):
                     source_id=source_doc["sourceId"],
                     name=source_doc["name"],
                     location=source_doc["location"],
-                    source_type=source_doc["sourceType"]
+                    source_type=km_models.SourceType(source_doc["sourceType"])
                 )
             )
 
@@ -88,6 +88,15 @@ class MongoKnowledgeSnapshotRepository(AbstractKnowledgeSnapshotRepository):
                 version=doc["version"],
                 created_at=doc["createdAt"]
             )
+            for source_doc in doc["sources"]:
+                snapshot.add_source(
+                    km_models.KnowledgeSource(
+                        source_id=source_doc["sourceId"],
+                        name=source_doc["name"],
+                        location=source_doc["location"],
+                        source_type=km_models.SourceType(source_doc["sourceType"])
+                    )
+                )
             snapshots.append(snapshot)
 
         return snapshots
@@ -102,12 +111,23 @@ class MongoKnowledgeSnapshotRepository(AbstractKnowledgeSnapshotRepository):
         if not doc:
             return None
 
-        return models.KnowledgeSnapshot(
+        snapshot = models.KnowledgeSnapshot(
             group_id=doc["groupId"],
             version=doc["version"],
-            created_at=doc["createdAt"],
-            sources=doc["sources"]
+            created_at=doc["createdAt"]
         )
+
+        for source_doc in doc["sources"]:
+            snapshot.add_source(
+                km_models.KnowledgeSource(
+                    source_id=source_doc["sourceId"],
+                    name=source_doc["name"],
+                    location=source_doc["location"],
+                    source_type=km_models.SourceType(source_doc["sourceType"])
+                )
+            )
+
+        return snapshot
 
 
 class AbstractKnowledgeVectorRepository(abc.ABC):

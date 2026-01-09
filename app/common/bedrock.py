@@ -8,13 +8,13 @@ from app import config
 bedrock_client: boto3.client = None
 
 
-def get_bedrock_client():
+def get_bedrock_client(app_config: config.AppConfig | None = None):
     global bedrock_client
 
     if bedrock_client is None:
         bedrock_client = boto3.client(
             "bedrock-runtime",
-            region_name=config.config.aws_region
+            region_name=app_config.aws_region
         )
 
     return bedrock_client

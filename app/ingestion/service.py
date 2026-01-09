@@ -52,7 +52,7 @@ class IngestionService:
         vectors: ingestion_models.IngestionVector = None
 
         match source.source_type:
-            case "PRECHUNKED_BLOB":
+            case km_models.SourceType.PRECHUNKED_BLOB:
                 vectors = await self._process_prechunked_source(source, snapshot_id)
             case _:
                 msg = f"Source type {source.source_type} ingestion not implemented"

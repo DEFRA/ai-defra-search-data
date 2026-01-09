@@ -86,7 +86,7 @@ class MongoKnowledgeGroupRepository(AbstractKnowledgeGroupRepository):
         async for source_doc in cursor:
             source = models.KnowledgeSource(
                 name=source_doc["name"],
-                source_type=source_doc["sourceType"],
+                source_type=models.SourceType(source_doc["sourceType"]),
                 location=source_doc["location"],
                 source_id=source_doc["sourceId"]
             )
