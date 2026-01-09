@@ -6,6 +6,15 @@ import pydantic_settings
 class BedrockEmbeddingConfig(pydantic_settings.BaseSettings):
     model_config = pydantic_settings.SettingsConfigDict()
     model_id: str = pydantic.Field(..., alias="BEDROCK_EMBEDDING_MODEL_ID")
+    use_credentials: bool = pydantic.Field(
+        default=False, alias="AWS_BEDROCK_USE_CREDENTIALS"
+    )
+    access_key_id: str | None = pydantic.Field(
+        default=None, alias="AWS_BEDROCK_ACCESS_KEY_ID"
+    )
+    secret_access_key: str | None = pydantic.Field(
+        default=None, alias="AWS_BEDROCK_SECRET_ACCESS_KEY"
+    )
 
 
 class PostgresConfig(pydantic_settings.BaseSettings):
