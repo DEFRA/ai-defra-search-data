@@ -68,7 +68,7 @@ def main():
             endpoint_url=S3_ENDPOINT,
             region_name=AWS_REGION,
             aws_access_key_id="test",
-            aws_secret_access_key="test",
+            aws_secret_access_key="test",  # noqa: S106
         )
 
         # The ingestion service expects files at {source_id}/{filename}
