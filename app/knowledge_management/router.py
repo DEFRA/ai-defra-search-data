@@ -11,7 +11,24 @@ from app.snapshot import service as snapshot_service
 router = fastapi.APIRouter(tags=["knowledge-management"])
 
 
-@router.get("/knowledge/groups", status_code=fastapi.status.HTTP_200_OK, response_model=list[api_schemas.KnowledgeGroupResponse])
+def _map_sources(sources: dict[str, models.KnowledgeSource]) -> dict[str, api_schemas.KnowledgeSourceResponse]:
+    return {
+        sid: api_schemas.KnowledgeSourceResponse(
+            source_id=s.source_id,
+            name=s.name,
+            type=s.source_type,
+            location=s.location
+        )
+        for sid, s in sources.items()
+    }
+
+
+@router.get(
+    "/knowledge/groups",
+    status_code=fastapi.status.HTTP_200_OK,
+    response_model=list[api_schemas.KnowledgeGroupResponse],
+    responses={fastapi.status.HTTP_204_NO_CONTENT: {"description": "No knowledge groups found"}},
+)
 async def list_groups(service: km_service.KnowledgeManagementService = fastapi.Depends(dependencies.get_knowledge_management_service)):
     """
     List all knowledge groups.
@@ -34,7 +51,8 @@ async def list_groups(service: km_service.KnowledgeManagementService = fastapi.D
             description=group.description,
             owner=group.owner,
             created_at=group.created_at.isoformat(),
-            updated_at=group.updated_at.isoformat()
+            updated_at=group.updated_at.isoformat(),
+            sources=_map_sources(group.sources)
         ) for group in groups
     ]
 
@@ -70,7 +88,8 @@ async def create_group(group: api_schemas.CreateKnowledgeGroupRequest, service: 
         description=knowledge_group.description,
         owner=knowledge_group.owner,
         created_at=knowledge_group.created_at.isoformat(),
-        updated_at=knowledge_group.updated_at.isoformat()
+        updated_at=knowledge_group.updated_at.isoformat(),
+        sources=_map_sources(knowledge_group.sources)
     )
 
 
@@ -96,7 +115,7 @@ async def get_group(group_id: str, service: km_service.KnowledgeManagementServic
             owner=group.owner,
             created_at=group.created_at.isoformat(),
             updated_at=group.updated_at.isoformat(),
-            sources=group.sources
+            sources=_map_sources(group.sources)
         )
     except models.KnowledgeGroupNotFoundError as err:
         raise fastapi.HTTPException(status_code=404, detail=f"Knowledge group with ID '{group_id}' not found") from err
@@ -125,7 +144,7 @@ async def list_group_snapshots(
             "group_id": snapshot.group_id,
             "version": snapshot.version,
             "created_at": snapshot.created_at.isoformat(),
-            "sources": [source.__dict__ for source in snapshot._sources]
+            "sources": [source.__dict__ for source in snapshot.sources.values()]
         }
         for snapshot in snapshots
     ]
@@ -195,7 +214,7 @@ async def add_source(
             owner=group.owner,
             created_at=group.created_at.isoformat(),
             updated_at=group.updated_at.isoformat(),
-            sources=group.sources
+            sources=_map_sources(group.sources)
         )
     except models.KnowledgeGroupNotFoundError as err:
         raise fastapi.HTTPException(status_code=404, detail=f"Knowledge group with ID '{group_id}' not found") from err
