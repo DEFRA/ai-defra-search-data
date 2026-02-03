@@ -332,11 +332,21 @@ The S3 bucket is structured as follows:
         - ...
 ```
 
-Chunk files are expected to be JSONL files, with each line representing a chunk of data to be ingested according to the following schema:
+Chunk files are expected to be [JSONL](https://jsonlines.org/) files, with each line representing a chunk of data to be ingested according to the following schema:
 ```json
 {
-    "source": "string",  // Original source location e.g. URL or file path
-    "text": "string"     // Chunked text content
+    "type": "object",
+    "properties": {
+        "source": {
+            "type": "string",
+            "description": "Original source location e.g. URL or file path"
+        },
+        "text": {
+            "type": "string",
+            "description": "Chunked text content"
+        }
+    },
+    "required": ["source", "text"]
 }
 ```
 
