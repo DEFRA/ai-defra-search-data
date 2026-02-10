@@ -3,7 +3,7 @@ ARG PARENT_VERSION=latest-3.13
 ARG PORT=8085
 ARG PORT_DEBUG=8086
 
-FROM defradigital/python-development:${PARENT_VERSION} AS development
+FROM --platform=linux/amd64 defradigital/python-development:${PARENT_VERSION} AS development
 
 ENV PATH="/home/nonroot/.venv/bin:${PATH}"
 ENV LOG_CONFIG="logging-dev.json"
