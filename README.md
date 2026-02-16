@@ -2,7 +2,7 @@
 
 A agentic workflow that demonstrates client-side Model Context Protocol (MCP) usage within a FastAPI application.
 
-## Prequisites
+## Prerequisites
 - [Python](https://docs.python.org/3/using/index.html) `>= 3.13` - We recommend using [uv](https://docs.astral.sh/uv/getting-started/installation/) to manage your Python environment.
 - [pipx](https://pipxproject.github.io/pipx/installation/)
 - [uv](https://docs.astral.sh/uv/getting-started/installation/) 
@@ -13,7 +13,7 @@ A agentic workflow that demonstrates client-side Model Context Protocol (MCP) us
 
 ### Python
 
-Please install python `>= 3.12` and `pipx` in your environment. This template uses [uv](https://github.com/astral-sh/uv) to manage the environment and dependencies.
+Please install Python `>= 3.13` and `pipx` in your environment. This template uses [uv](https://github.com/astral-sh/uv) to manage the environment and dependencies.
 
 ```python
 # install uv via pipx
@@ -113,11 +113,69 @@ To test the application run:
 uv run pytest
 ```
 
+## Python client
+
+Install the package and use the sync or async client:
+
+```python
+from app.client import DefraDataClient, AsyncDefraDataClient
+from app.client import CreateKnowledgeGroupRequest, KnowledgeSourceInput, SourceType
+
+# Sync
+with DefraDataClient(base_url="http://data.localhost") as client:
+    groups = client.list_groups()
+    group = client.create_group(CreateKnowledgeGroupRequest(
+        name="My Group",
+        description="Description",
+        owner="me",
+        sources=[KnowledgeSourceInput(name="doc", type=SourceType.BLOB, location="s3://bucket/file.pdf")],
+    ))
+    client.ingest_group(group.group_id)
+    results = client.query(group.group_id, "search query", max_results=10)
+
+# Async
+async with AsyncDefraDataClient(base_url="http://data.localhost") as client:
+    groups = await client.list_groups()
+    group_id = groups[0].group_id
+    snapshots = await client.list_group_snapshots(group_id)
+    await client.activate_snapshot(snapshots[0].snapshot_id)
+```
+
+## CLI
+
+After `uv sync`, use the `knowledge-cli` entry point. Options: `--base-url` / `-u`, `--timeout` / `-t`, `--json` / `-j`. Base URL can be set via `DEFRA_DATA_URL`.
+
+```bash
+# Groups
+uv run knowledge-cli groups list
+uv run knowledge-cli groups get <group_id>
+uv run knowledge-cli groups create --name "My Group" --description "..." --owner "me" [-s name:BLOB:s3://bucket/file.pdf]
+uv run knowledge-cli groups add-source <group_id> --name "doc" --type BLOB --location "s3://bucket/file.pdf"
+uv run knowledge-cli groups ingest <group_id>
+uv run knowledge-cli groups snapshots <group_id>
+
+# Snapshots
+uv run knowledge-cli snapshots get <snapshot_id>
+uv run knowledge-cli snapshots activate <snapshot_id>
+
+# Vector search
+uv run knowledge-cli query <group_id> "search query" [--max-results 10]
+```
+
 ## API endpoints
 
-| Endpoint             | Description                    |
-| :------------------- | :----------------------------- |
-| `GET: /health`       | Health check endpoint          |
+| Method | Endpoint | Description |
+| :----- | :------- | :----------- |
+| GET | `/health` | Health check |
+| GET | `/knowledge/groups` | List knowledge groups |
+| POST | `/knowledge/groups` | Create knowledge group |
+| GET | `/knowledge/groups/{group_id}` | Get knowledge group |
+| GET | `/knowledge/groups/{group_id}/snapshots` | List snapshots for group |
+| POST | `/knowledge/groups/{group_id}/ingest` | Trigger ingestion (202) |
+| PATCH | `/knowledge/groups/{group_id}/sources` | Add source to group |
+| GET | `/snapshots/{snapshot_id}` | Get snapshot |
+| POST | `/snapshots/query` | Vector search |
+| PATCH | `/snapshots/{snapshot_id}/activate` | Activate snapshot |
 
 ## Custom Cloudwatch Metrics
 

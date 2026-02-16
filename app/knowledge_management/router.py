@@ -2,6 +2,7 @@ import datetime
 
 import fastapi
 
+from app.ingestion import models as ingestion_models
 from app.ingestion import service as ingestion_service
 from app.knowledge_management import api_schemas, dependencies, models
 from app.knowledge_management import service as km_service
@@ -177,6 +178,11 @@ async def ingest_group(
         await ingestion_service.process_group(group)
 
         return {"message": f"Ingestion for knowledge group '{group_id}' has been initiated. Processing {len(group.sources)} sources individually."}
+    except ingestion_models.IngestionAlreadyInProgressError as err:
+        raise fastapi.HTTPException(
+            status_code=409,
+            detail=str(err),
+        ) from err
     except models.KnowledgeGroupNotFoundError as err:
         raise fastapi.HTTPException(status_code=404, detail=f"Knowledge group with ID '{group_id}' not found") from err
 
