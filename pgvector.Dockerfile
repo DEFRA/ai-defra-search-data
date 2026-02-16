@@ -1,5 +1,5 @@
 # Use a specific version of the Postgres image
-FROM postgres:16.6-alpine3.21 AS pg-builder
+FROM postgres:16.6-alpine3.23 AS pg-builder
 
 RUN apk add git
 RUN apk add build-base
@@ -11,7 +11,7 @@ WORKDIR /home/pgvector
 RUN make
 RUN make install
 
-FROM postgres:16.6-alpine3.21
+FROM postgres:16.6-alpine3.23
 COPY --from=pg-builder /usr/local/lib/postgresql/bitcode/vector.index.bc /usr/local/lib/postgresql/bitcode/vector.index.bc
 COPY --from=pg-builder /usr/local/lib/postgresql/vector.so /usr/local/lib/postgresql/vector.so
 COPY --from=pg-builder /usr/local/share/postgresql/extension /usr/local/share/postgresql/extension

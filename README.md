@@ -65,6 +65,18 @@ Follow the convention below for environment variables and secrets in local devel
 
 **Libraries:** Ensure the python virtual environment is configured and libraries are installed using `uv sync`, [as above](#python)
 
+The following environment variables can be configured for the application:
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `AWS_REGION` | Yes | `eu-central-1` | The AWS region to use for AWS services |
+| `AWS_DEFAULT_REGION` | Yes | `eu-central-1` | The default AWS region (should match AWS_REGION) |
+| `AWS_ACCESS_KEY_ID` | Yes | `test` | AWS access key ID (use `test` for local development with Localstack) |
+| `AWS_SECRET_ACCESS_KEY` | Yes | `test` | AWS secret access key (use `test` for local development with Localstack) |
+| `AWS_BEARER_TOKEN_BEDROCK` | Yes | N/A | Bearer token for AWS Bedrock authentication |
+| `BEDROCK_EMBEDDING_MODEL_ID` | Yes | `amazon.titan-embed-text-v2:0` | The AWS Bedrock model ID to use for generating embeddings |
+| `INGESTION_DATA_BUCKET_NAME` | Yes | `ai-defra-search-ingestion-data` | S3 bucket name containing data for ingestion |
+
 ### Development
 
 This app can be run locally by either using the Docker Compose project or via the provided script `scripts/start_dev_server.sh`.
@@ -113,11 +125,316 @@ To test the application run:
 uv run pytest
 ```
 
-## API endpoints
+## Architecture Overview
 
-| Endpoint             | Description                    |
-| :------------------- | :----------------------------- |
-| `GET: /health`       | Health check endpoint          |
+The service consists of a FastAPI application that interacts with AWS services and databases to store and retrieve knowledge data.
+
+By default, all metadata / models are stored in MongoDB, with Postgres (using the pgvector extension) being used exclusively for vector storage and similarity search.
+
+```mermaid
+graph TB   
+    subgraph "AI Defra Search Data Service"
+        API[FastAPI Application]
+    end
+    
+    subgraph "Knowledge Storage"
+        MongoDB[(MongoDB<br/>Metadata Storage)]
+        PgVector[(PostgreSQL + pgvector<br/>Vector Storage)]
+    end
+    
+    subgraph "AWS Services"
+        S3[S3 Bucket<br/>Ingestion Data]
+        Bedrock[Amazon Bedrock<br/>Titan Embeddings]
+    end
+       
+    API -->|Store/Retrieve<br/>Groups & Snapshots| MongoDB
+    API -->|Read Chunks| S3
+    API -->|Generate<br/>Embeddings| Bedrock
+    API -->|Store/Search<br/>Vectors| PgVector
+    
+    style API fill:#e1f5ff
+    style MongoDB fill:#c8e6c9
+    style PgVector fill:#c8e6c9
+    style S3 fill:#fff9c4
+    style Bedrock fill:#fff9c4
+```
+
+The service is built around two main domain concepts:
+* Knowledge Groups - A collection of related data sources that can be ingested and queried together.
+* Knowledge Snapshots - An immutable snapshot of ingested data from a Knowledge Group at a specific point in time.
+
+### API Documentation
+
+Automated API documentation via FastAPI and Swagger UI is available at:
+
+```
+http://localhost:8085/docs
+```
+
+### Knowledge Group
+
+A Knowledge Group represents a collection of related data sources that can be ingested and queried together. Each Knowledge Group has a unique identifier and contains metadata about the data sources it encompasses.
+
+#### Domain Model
+
+```mermaid
+classDiagram
+    direction LR
+    class KnowledgeGroup {
+        +string: group_id
+        +string: name
+        +string: description
+        +string: owner
+        +date: created_at
+        +date: updated_at
+        +string: active_snapshot
+        +add_source(source)
+        +sources() dict~string, KnowledgeSource~
+    }
+
+    class KnowledgeSource {
+        +string : source_id
+        +string : name
+        +SourceType : source_type
+        +string : location
+    }
+
+    class SourceType {
+        <<enumeration>>
+        BLOB
+        PRECHUNKED_BLOB
+    }
+
+    note for KnowledgeGroup "group_id format: kg_{12-char-random}"
+    note for KnowledgeSource "source_id format: ks_{12-char-random}"
+
+    KnowledgeGroup "1" o-- "*" KnowledgeSource : contains
+    KnowledgeSource --> SourceType
+```
+
+**Identifier Format:**
+- `group_id`: Auto-generated in the format `kg_{random}` where `{random}` is a 12-character  string (lowercase letters and digits)
+- `source_id`: Auto-generated in the format `ks_{random}` where `{random}` is a 12-character  string (lowercase letters and digits)
+
+#### Creation Process
+
+```mermaid
+---
+title: Knowledge Group Creation Sequence
+---
+sequenceDiagram
+    autonumber
+    participant Client
+    participant Service as AI Defra Search Data<br /> (FastAPI)
+    participant MongoDB
+    
+    Client->>+Service: POST /knowledge/groups
+    
+    Service->>Service: Generate group_id (kg_{random})
+    Service->>Service: Generate source_id for each source (ks_{random})
+    
+    Service->>+MongoDB: Save Knowledge Group metadata
+    MongoDB-->>-Service: Group saved
+    
+    Service->>+MongoDB: Save associated Knowledge Sources
+    MongoDB-->>-Service: Sources saved
+    
+    Service-->>-Client: 201 CREATED (Knowledge Group created)
+```
+
+#### Adding Sources
+
+```mermaid
+---
+title: Adding Source to Existing Knowledge Group
+---
+sequenceDiagram
+    autonumber
+    participant Client
+    participant Service as AI Defra Search Data<br /> (FastAPI)
+    participant MongoDB
+    
+    Client->>+Service: PATCH /knowledge/groups/{group_id}/sources
+    
+    Service->>+MongoDB: Get Knowledge Group by group_id
+    MongoDB-->>-Service: Knowledge Group
+    
+    Service->>Service: Generate source_id (ks_{random})
+    Service->>Service: Validate source not already in group
+    
+    Service->>+MongoDB: Add Knowledge Source to group
+    MongoDB-->>-Service: Source added
+    
+    Service-->>-Client: 200 OK (Updated Knowledge Group)
+```
+
+### Knowledge Snapshots
+
+A Knowledge Snapshot represents an immutable snapshot of a Knowledge Group at a specific point in time. On the triggering of a snapshot creation, all data sources within the associated Knowledge Group are ingested and stored as part of the snapshot.
+
+This allows for versioned access to the ingested data, enabling users to query historical data states and for auditability of what context was available at any given time. In the future, this could also allow for automated regression testing via frameworks such as [Ragasti](https://docs.ragas.io/en/stable/) and faciliate rollbacks to previous data states if needed.
+
+#### Domain Model
+
+```mermaid
+classDiagram
+    direction LR
+    class KnowledgeSnapshot {
+        +string : group_id
+        +int : version
+        +date : created_at
+        +dict~string, KnowledgeSource~ : sources
+        +snapshot_id() string
+        +add_source(source)
+    }
+
+    class KnowledgeSource {
+        +string : source_id
+        +string : name
+        +SourceType : source_type
+        +string : location
+    }
+
+    class KnowledgeVector {
+        +string : content
+        +list~float~ : embedding
+        +string : snapshot_id
+        +string : source_id
+        +dict : metadata
+    }
+
+    class SourceType {
+        <<enumeration>>
+        BLOB
+        PRECHUNKED_BLOB
+    }
+
+    note for KnowledgeSnapshot "snapshot_id format: {group_id}_v{version}"
+
+    KnowledgeSnapshot "1" o-- "*" KnowledgeSource : contains
+    KnowledgeSnapshot "1" --> "*" KnowledgeVector : produces
+    KnowledgeVector --> KnowledgeSource : originates from
+    KnowledgeSource --> SourceType
+```
+
+**Identifier Format:**
+- `snapshot_id`: Computed property in the format `{group_id}_v{version}` (e.g., `kg_abc123def456_v1`)
+
+#### Pre-chunked Blob Ingestion Process
+
+Currently, only pre-chunked blobs within the `ai-defra-search-ingestion-data` S3 bucket are supported for ingestion. The name of this bucket will change based on the CDP environment and can be configured via the `INGESTION_DATA_BUCKET_NAME` environment variable.
+
+The S3 bucket is structured as follows:
+```
+    - {knowledge_source_id}/
+        - chunks_1.txt
+        - chunks_2.txt
+        - ...
+```
+
+Chunk files are expected to be [JSONL](https://jsonlines.org/) files, with each line representing a chunk of data to be ingested according to the following schema:
+```json
+{
+    "type": "object",
+    "properties": {
+        "source": {
+            "type": "string",
+            "description": "Original source location e.g. URL or file path"
+        },
+        "text": {
+            "type": "string",
+            "description": "Chunked text content"
+        }
+    },
+    "required": ["source", "text"]
+}
+```
+
+```mermaid
+---
+title: Pre-chunked Blob Ingestion Sequence
+---
+sequenceDiagram
+    autonumber
+    participant Client
+    participant Service as AI Defra Search Data<br /> (FastAPI)
+    participant MongoDB
+    participant S3 as S3<br/>(Ingestion Data)
+    participant Bedrock as Amazon Bedrock<br/>(Embeddings)
+    participant PgVector as PostgreSQL<br/>(pgvector)
+    
+    Note over Client,S3: Prerequisite: Upload Pre-chunked Data
+    Client->>+S3: Upload pre-chunked JSONL files to<br/>{knowledge_source_id}/
+    S3-->>-Client: Files uploaded
+    
+    Note over Client,PgVector: Snapshot Creation and Ingestion
+    Client->>+Service: POST /knowledge/groups/{group_id}/ingest
+    
+    Note over Service,MongoDB: Create Snapshot
+    Service->>+MongoDB: Retrieve all data sources for Knowledge Group
+    MongoDB-->>-Service: KnowledgeGroup with sources
+    Service->>+MongoDB: Create new snapshot with incremented version
+    MongoDB-->>-Service: Snapshot created
+    
+    Service-->>-Client: 202 ACCEPTED (Background processing initiated)
+    
+    Note over Service,PgVector: Background Processing (parallel per source)
+    
+    par For each data source (background tasks)
+        Service->>+S3: List chunk files under {knowledge_source_id}/
+        S3-->>-Service: List of chunk files
+        
+        loop For each chunk file
+            Service->>+S3: Read JSONL file
+            S3-->>-Service: File content (chunked data)
+            Service->>+Bedrock: Generate embeddings for chunks
+            Bedrock-->>-Service: Embedded chunks (vectors)
+        end
+        
+        Service->>+PgVector: Store chunk embeddings with metadata
+        PgVector-->>-Service: Vectors stored
+    end
+```
+
+#### Query Process
+
+Active snapshots can be queried using semantic search. The active snapshot for a Knowledge Group is specified by the `active_snapshot` field in the Knowledge Group metadata.
+
+```mermaid
+---
+title: Knowledge Query Sequence
+---
+sequenceDiagram
+    autonumber
+    participant Client
+    participant Service as AI Defra Search Data<br /> (FastAPI)
+    participant MongoDB
+    participant Bedrock as Amazon Bedrock<br/>(Embeddings)
+    participant PgVector as PostgreSQL<br/>(pgvector)
+    
+    Client->>+Service: POST /snapshots/query
+    Note right of Client: Request includes:<br/>- group_id<br/>- query<br/>- max_results
+    
+    Service->>+MongoDB: Get Knowledge Group by group_id
+    MongoDB-->>-Service: Knowledge Group
+    
+    Service->>Service: Check active_snapshot exists
+    alt No active snapshot
+        Service-->>Client: 400 Bad Request<br/>(No active snapshot)
+    end
+    
+    Service->>+Bedrock: Generate embedding for query
+    Bedrock-->>-Service: Query vector (1024-dim)
+    
+    Service->>+PgVector: Vector similarity search<br/>(cosine distance)
+    Note right of PgVector: Filters by snapshot_id<br/>Orders by similarity<br/>Limits to max_results
+    PgVector-->>-Service: Top matching chunks
+    
+    Service->>Service: Enrich with source metadata<br/>Calculate similarity scores
+    
+    Service-->>-Client: 200 OK (Relevant documents)
+    Note left of Service: Response includes:<br/>- content<br/>- similarity scores<br/>- source metadata
+```
 
 ## Custom Cloudwatch Metrics
 
