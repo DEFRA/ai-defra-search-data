@@ -32,3 +32,7 @@ class ChunkData:
 
 class NoSourceDataError(Exception):
     """Raised when no source data is found for a given source."""
+
+
+class IngestionAlreadyInProgressError(Exception):
+    """Raised when ingest is already running for a knowledge group."""

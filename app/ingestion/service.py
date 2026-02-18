@@ -11,6 +11,9 @@ from app.snapshot import service as snapshot_service
 
 logger = logging.getLogger(__name__)
 
+# Tracks group_ids currently being ingested to prevent duplicate concurrent runs
+_ingest_in_progress: set[str] = set()
+
 
 class IngestionService:
     """Service class for processing knowledge sources."""
@@ -30,14 +33,37 @@ class IngestionService:
     async def process_group(self, group: km_models.KnowledgeGroup) -> None:
         """
         Initiate background processing for all sources in a knowledge group.
+        Rejects if ingest is already in progress for this group.
 
         Args:
             group: The knowledge group containing sources to process
+
+        Raises:
+            IngestionAlreadyInProgressError: If ingest is already running for this group
         """
+        if group.group_id in _ingest_in_progress:
+            raise ingestion_models.IngestionAlreadyInProgressError(
+                f"Ingestion already in progress for group '{group.group_id}'"
+            )
+        _ingest_in_progress.add(group.group_id)
+
         snapshot = await self.snapshot_service.create_snapshot(group.group_id, group.sources.values())
 
-        for source in group.sources.values():
-            self.background_tasks.add_task(self._process_source, source, snapshot.snapshot_id)
+        self.background_tasks.add_task(
+            self._process_group_background,
+            group,
+            snapshot.snapshot_id,
+        )
+
+    async def _process_group_background(
+        self, group: km_models.KnowledgeGroup, snapshot_id: str
+    ) -> None:
+        """Process all sources in background; clears ingest lock when done."""
+        try:
+            for source in group.sources.values():
+                await self._process_source(source, snapshot_id)
+        finally:
+            _ingest_in_progress.discard(group.group_id)
 
     async def _process_source(self, source: km_models.KnowledgeSource, snapshot_id: str) -> None:
         """
@@ -101,8 +127,9 @@ class IngestionService:
         """
         logger.info("Processing pre-chunked data from file")
 
+        chunk_fields = set(ingestion_models.ChunkData.__dataclass_fields__)
         chunks = [
-            ingestion_models.ChunkData(**json.loads(line))
+            ingestion_models.ChunkData(**{k: v for k, v in json.loads(line).items() if k in chunk_fields})
             for line in file.splitlines()
         ]
 
