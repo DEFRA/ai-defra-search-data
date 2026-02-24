@@ -36,3 +36,4 @@ class KnowledgeGroupResponse(BaseModel):
     created_at: str = Field(..., description="The creation date of the knowledge group in ISO format", serialization_alias="createdAt")
     updated_at: str = Field(..., description="The last update date of the knowledge group in ISO format", serialization_alias="updatedAt")
     sources: dict[str, KnowledgeSourceResponse] = Field(..., description="The sources associated with the knowledge group")
+    active_snapshot: str | None = Field(default=None, description="The active snapshot ID for this group", serialization_alias="activeSnapshot")

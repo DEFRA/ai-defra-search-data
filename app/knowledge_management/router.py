@@ -53,8 +53,10 @@ async def list_groups(service: km_service.KnowledgeManagementService = fastapi.D
             owner=group.owner,
             created_at=group.created_at.isoformat(),
             updated_at=group.updated_at.isoformat(),
-            sources=_map_sources(group.sources)
-        ) for group in groups
+            sources=_map_sources(group.sources),
+            active_snapshot=group.active_snapshot,
+        )
+        for group in groups
     ]
 
 
@@ -90,7 +92,8 @@ async def create_group(group: api_schemas.CreateKnowledgeGroupRequest, service: 
         owner=knowledge_group.owner,
         created_at=knowledge_group.created_at.isoformat(),
         updated_at=knowledge_group.updated_at.isoformat(),
-        sources=_map_sources(knowledge_group.sources)
+        sources=_map_sources(knowledge_group.sources),
+        active_snapshot=knowledge_group.active_snapshot,
     )
 
 
@@ -116,7 +119,8 @@ async def get_group(group_id: str, service: km_service.KnowledgeManagementServic
             owner=group.owner,
             created_at=group.created_at.isoformat(),
             updated_at=group.updated_at.isoformat(),
-            sources=_map_sources(group.sources)
+            sources=_map_sources(group.sources),
+            active_snapshot=group.active_snapshot,
         )
     except models.KnowledgeGroupNotFoundError as err:
         raise fastapi.HTTPException(status_code=404, detail=f"Knowledge group with ID '{group_id}' not found") from err
@@ -220,7 +224,41 @@ async def add_source(
             owner=group.owner,
             created_at=group.created_at.isoformat(),
             updated_at=group.updated_at.isoformat(),
-            sources=_map_sources(group.sources)
+            sources=_map_sources(group.sources),
+            active_snapshot=group.active_snapshot,
         )
     except models.KnowledgeGroupNotFoundError as err:
         raise fastapi.HTTPException(status_code=404, detail=f"Knowledge group with ID '{group_id}' not found") from err
+
+
+@router.delete(
+    "/knowledge/groups/{group_id}/sources/{source_id}",
+    status_code=fastapi.status.HTTP_204_NO_CONTENT,
+)
+async def remove_source(
+    group_id: str,
+    source_id: str,
+    service: km_service.KnowledgeManagementService = fastapi.Depends(
+        dependencies.get_knowledge_management_service
+    ),
+):
+    """
+    Remove a source from a knowledge group.
+
+    Args:
+        group_id: The ID of the knowledge group
+        source_id: The ID of the source to remove
+    """
+    try:
+        await service.remove_source_from_group(group_id, source_id)
+        return fastapi.Response(status_code=fastapi.status.HTTP_204_NO_CONTENT)
+    except models.KnowledgeGroupNotFoundError as err:
+        raise fastapi.HTTPException(
+            status_code=404,
+            detail=f"Knowledge group with ID '{group_id}' not found",
+        ) from err
+    except models.KnowledgeSourceNotFoundError as err:
+        raise fastapi.HTTPException(
+            status_code=404,
+            detail=str(err),
+        ) from err
