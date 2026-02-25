@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import logging
 
@@ -122,7 +123,7 @@ class SnapshotService:
 
         snapshot = await self.get_by_id(group.active_snapshot)
 
-        embedding = self._embedding_service.generate_embeddings(query)
+        embedding = await asyncio.to_thread(self._embedding_service.generate_embeddings, query)
 
         documents = await self._vector_repo.query_by_snapshot(embedding, group.active_snapshot, max_results)
 
