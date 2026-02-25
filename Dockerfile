@@ -6,7 +6,7 @@ ARG PORT_DEBUG=8086
 FROM --platform=linux/amd64 defradigital/python-development:${PARENT_VERSION} AS development
 
 USER root
-RUN apt-get update && apt-get install -y --no-install-recommends build-essential \
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential curl \
     && rm -rf /var/lib/apt/lists/*
 USER nonroot
 
