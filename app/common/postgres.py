@@ -1,4 +1,5 @@
 import logging
+import pathlib
 
 import boto3
 import sqlalchemy
@@ -10,6 +11,8 @@ from app.common import tls
 from app.snapshot import orm_models
 
 logger = logging.getLogger(__name__)
+
+_SEED_SQL = pathlib.Path(__file__).parent / "seed_data" / "knowledge_vectors.sql"
 
 engine: sqlalchemy.ext.asyncio.AsyncEngine = None
 async_session_factory: sqlalchemy.ext.asyncio.async_sessionmaker[sqlalchemy.ext.asyncio.AsyncSession] = None
@@ -59,12 +62,25 @@ async def get_sql_engine() -> sqlalchemy.ext.asyncio.AsyncEngine:
     logger.info("Testing Postgres SQLAlchemy connection to %s", config.config.postgres.host)
     await check_connection(engine)
 
+    await _seed_postgres(engine)
+
     return engine
 
 
 async def check_connection(engine: sqlalchemy.ext.asyncio.AsyncEngine) -> bool:
     async with engine.connect() as connection:
         await connection.execute(sqlalchemy.text("SELECT 1 FROM knowledge_vectors"))
+
+
+async def _seed_postgres(engine: sqlalchemy.ext.asyncio.AsyncEngine) -> None:
+    """Seed the postgres database with development data on startup."""
+    logger.info("Seeding Postgres database with development data")
+    sql = _SEED_SQL.read_text()
+
+    async with engine.begin() as connection:
+        await connection.execute(sqlalchemy.text(sql))
+
+    logger.info("Postgres database seeded successfully")
 
 
 def get_token(dialect, conn_rec, cargs, cparams):  # noqa: ARG001
@@ -100,4 +116,3 @@ async def get_async_session_factory() -> sqlalchemy.ext.asyncio.async_sessionmak
         )
 
     return async_session_factory
-
