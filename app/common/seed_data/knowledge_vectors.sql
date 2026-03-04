@@ -1,7 +1,7 @@
 -- Seed test data for knowledge_vectors table
 -- This creates test knowledge base entries with the snapshot_id 'kg_34vf0wr3e06l'
 
-TRUNCATE TABLE knowledge_vectors;
+DELETE FROM knowledge_vectors;
 
 INSERT INTO knowledge_vectors (content, embedding, snapshot_id, source_id, metadata, created_at)
 VALUES
