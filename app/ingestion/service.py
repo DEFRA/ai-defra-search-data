@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 
@@ -98,7 +99,7 @@ class IngestionService:
         """
         logger.info("Processing pre-chunked source: %s", source.source_id)
 
-        chunk_files = self.ingestion_repository.list(source.source_id)
+        chunk_files = await asyncio.to_thread(self.ingestion_repository.list, source.source_id)
 
         if len(chunk_files) == 0:
             msg = f"No pre-chunked data found for source {source.source_id}"
@@ -107,7 +108,7 @@ class IngestionService:
         vectors = []
 
         for chunk_file in chunk_files:
-            file = self.ingestion_repository.get(chunk_file)
+            file = await asyncio.to_thread(self.ingestion_repository.get, chunk_file)
 
             if file is None:
                 msg = f"Failed to retrieve file {chunk_file} from repository for source {source.source_id}"
@@ -138,7 +139,7 @@ class IngestionService:
 
         for chunk_no in range(len(chunks)):
             chunk = chunks[chunk_no]
-            embedding = self.embedding_service.generate_embeddings(chunk.text)
+            embedding = await asyncio.to_thread(self.embedding_service.generate_embeddings, chunk.text)
             vector = ingestion_models.IngestionVector(
                 content=chunk.text,
                 embedding=embedding,

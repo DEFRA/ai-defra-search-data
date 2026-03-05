@@ -25,8 +25,8 @@ knowledge_vectors = sqlalchemy.Table(
         nullable=False,
         server_default=sqlalchemy.func.current_timestamp()
     ),
-    sqlalchemy.Column("snapshot_id", sqlalchemy.String(50), nullable=True),
-    sqlalchemy.Column("source_id", sqlalchemy.String(50), nullable=True),
+    sqlalchemy.Column("snapshot_id", sqlalchemy.String(512), nullable=True),
+    sqlalchemy.Column("source_id", sqlalchemy.String(512), nullable=True),
     sqlalchemy.Column("metadata", sqlalchemy.dialects.postgresql.JSONB, nullable=True),
 )
 

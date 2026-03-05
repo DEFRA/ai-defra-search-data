@@ -12,9 +12,10 @@ def get_bedrock_client():
     global bedrock_client
 
     if bedrock_client is None:
-        bedrock_client = boto3.client(
-            "bedrock-runtime", region_name=config.config.aws_region
-        )
+        kwargs: dict = {"region_name": config.config.aws_region}
+        if config.config.bedrock_endpoint_url:
+            kwargs["endpoint_url"] = config.config.bedrock_endpoint_url
+        bedrock_client = boto3.client("bedrock-runtime", **kwargs)
 
     return bedrock_client
 

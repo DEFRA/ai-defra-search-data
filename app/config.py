@@ -36,6 +36,9 @@ class AppConfig(pydantic_settings.BaseSettings):
     ingestion_data_bucket: str = pydantic.Field(..., alias="INGESTION_DATA_BUCKET_NAME")
     postgres: PostgresConfig = PostgresConfig()
     bedrock_embedding_config: BedrockEmbeddingConfig = BedrockEmbeddingConfig()
+    bedrock_endpoint_url: str | None = pydantic.Field(
+        default=None, alias="BEDROCK_ENDPOINT_URL"
+    )
 
 
 config = AppConfig()
